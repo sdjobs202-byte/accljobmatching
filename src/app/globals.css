@@ -19,11 +19,10 @@
   body { background: var(--color-canvas); color: var(--color-ink); }
 }
 
-/* 큰 italic 호명 카피 유틸 */
+/* 큰 호명 카피 유틸 (꼿꼿한 초굵은 글씨 + 라임 하이라이트로 임팩트) */
 .hail {
-  font-style: italic;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  font-weight: 900;
+  letter-spacing: -0.03em;
   line-height: 1.05;
 }
 
