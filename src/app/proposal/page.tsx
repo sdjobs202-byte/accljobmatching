@@ -219,17 +219,45 @@ export default function Proposal() {
       {/* 투자 */}
       <Section kicker="INVESTMENT" title="투자 안내">
         <div className="rounded-[18px] bg-indigo text-white p-8">
-          <div className="text-sm opacity-80">권장 2안 · 조건필터 + AI 보조 매칭 (개발 외주가)</div>
-          <div className="mt-2 flex items-end gap-3">
-            <span className="hail text-5xl">1,980만원</span>
-            <span className="opacity-80 mb-1">(VAT 포함 · 공급가 1,800만원)</span>
+          <div className="text-sm opacity-80">권장 2안 · 조건필터 + AI 보조 매칭</div>
+          <div className="mt-3 flex flex-wrap items-end gap-x-6 gap-y-2">
+            <div>
+              <div className="text-xs opacity-70">정가 (통상 외주가 4,870만원)</div>
+              <div className="text-2xl font-bold line-through opacity-70">1,980만원</div>
+            </div>
+            <div>
+              <div className="text-xs text-lime font-semibold">레퍼런스 1호 협약가 · 한정</div>
+              <div className="flex items-end gap-2">
+                <span className="hail text-5xl">300만원</span>
+                <span className="opacity-80 mb-1">(VAT 별도 · 선금 50%)</span>
+              </div>
+            </div>
           </div>
-          <p className="mt-3 inline-block rounded-full bg-lime text-ink text-sm font-semibold px-3 py-1">
-            통상 외주가(약 4,870만원) 대비 약 60% 절감
-          </p>
           <p className="mt-4 text-sm opacity-90 max-w-2xl">
-            화상면접·결제/정산 연동은 v2 별도 산정입니다. 유지보수·운영(서버·AI·알림 실비)은 별도 협의하며,
-            본 견적은 상세 기능 협의 시 조정될 수 있습니다.
+            정가는 1,980만 원이며, 아래 <b className="text-lime">레퍼런스 1호 협약</b> 조건에 한해 특별가로 진행합니다.
+            화상면접·결제/정산은 v2 별도 산정, 운영 실비는 별도 협의입니다.
+          </p>
+        </div>
+
+        {/* 협약 조건 */}
+        <div className="mt-6">
+          <div className="text-sm font-semibold text-indigo mb-3">레퍼런스 1호 협약가 적용 조건</div>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {[
+              ["공개 레퍼런스 권리", "실명·로고·사례를 포트폴리오(smartact.kr/works)에 게시 동의"],
+              ["추천사 + 소개", "완료 후 실명 추천사 1건 및 소개 1건"],
+              ["선금·빠른 결제", "계약 시 50% 선금, 납품 시 잔금"],
+              ["범위 고정", "명시된 기능 한정. 추가 기능은 별도 견적"],
+              ["직접 수정 자제", "운영 중 코드·DB 직접 수정은 별도 시간당 과금"],
+            ].map(([t, d], i) => (
+              <div key={t} className="flex items-start gap-3 rounded-xl border border-line p-4">
+                <span className="mt-0.5 inline-flex w-6 h-6 rounded-md bg-indigo text-white items-center justify-center text-xs font-bold">{i + 1}</span>
+                <div><div className="font-semibold text-sm">{t}</div><p className="text-xs text-muted mt-0.5">{d}</p></div>
+              </div>
+            ))}
+          </div>
+          <p className="mt-4 text-xs text-muted">
+            ※ 본 협약가는 1호 도입처 한정 특별가입니다. 이후 동일 사양 표준 단가는 정가 기준으로 적용됩니다.
           </p>
         </div>
       </Section>
