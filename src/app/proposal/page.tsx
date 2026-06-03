@@ -28,7 +28,7 @@ const FLOW = [
 ];
 
 const SCREENS = [
-  ["랜딩", "/", "호명 카피 · 역할별 진입 · 실시간 통계"],
+  ["랜딩", "/demo", "호명 카피 · 역할별 진입 · 실시간 통계"],
   ["채용공고", "/companies", "적합도순 정렬 + AI 한 줄 코멘트"],
   ["기업·공고 상세", "/companies/c1", "공고 상세 · AI 매칭 코멘트 · 지원"],
   ["지원서 작성", "/apply/j1", "이력서·자소서·포폴 첨부"],
@@ -103,7 +103,7 @@ export default function Proposal() {
           ))}
         </div>
         <div className="mt-8">
-          <Link href="/" className="rounded-full bg-indigo text-white px-6 py-3 font-semibold">▶ 라이브 데모 바로 보기</Link>
+          <Link href="/demo" className="rounded-full bg-indigo text-white px-6 py-3 font-semibold">▶ 라이브 데모 바로 보기</Link>
           <span className="ml-3 text-sm text-muted">* 아래 모든 화면은 이미 실제로 구현되어 클릭해볼 수 있습니다.</span>
         </div>
       </section>
@@ -278,7 +278,7 @@ export default function Proposal() {
         <div className="mt-10 rounded-[18px] bg-indigo-soft/50 p-8 text-center">
           <div className="hail text-2xl">다음 기회를, 학생에게.</div>
           <p className="mt-2 text-sm text-muted">제안에 대한 논의를 환영합니다 · smartact.kr</p>
-          <Link href="/" className="mt-5 inline-block rounded-full bg-indigo text-white px-7 py-3 font-semibold">라이브 데모 다시 보기</Link>
+          <Link href="/demo" className="mt-5 inline-block rounded-full bg-indigo text-white px-7 py-3 font-semibold">라이브 데모 다시 보기</Link>
         </div>
       </Section>
     </div>
