@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+/* ── 디자인 토큰 (딥 인디고 + 라임 / 화이트 베이스) ────────── */
+@theme {
+  --color-indigo: #2436c7;        /* 주 행동 */
+  --color-indigo-soft: #eef0ff;
+  --color-lime: #c6f432;          /* 강조 / 통계 */
+  --color-ink: #0c1024;           /* 텍스트 진함 */
+  --color-muted: #6b7280;
+  --color-line: #ececf1;
+  --color-canvas: #ffffff;
+
+  --font-sans: "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", sans-serif;
+  --radius-card: 18px;
+}
+
+@layer base {
+  html { -webkit-font-smoothing: antialiased; }
+  body { background: var(--color-canvas); color: var(--color-ink); }
+}
+
+/* 큰 italic 호명 카피 유틸 */
+.hail {
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+
+/* 상태 배지 */
+.badge { @apply inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold; }
+.badge-submitted { @apply bg-indigo-soft text-indigo; }
+.badge-reviewing { @apply bg-amber-50 text-amber-700; }
+.badge-confirmed { background: var(--color-lime); @apply text-ink; }
+.badge-rejected  { @apply bg-gray-100 text-muted; }

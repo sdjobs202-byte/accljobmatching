@@ -1,0 +1,11 @@
+node_modules
+.next
+out
+.env
+.env.local
+.DS_Store
+*.tsbuildinfo
+next-env.d.ts
+
+# 내부 영업 메모 (레포 제외, 로컬 유지)
+이메일_커리어웨이_강희승대표.md
