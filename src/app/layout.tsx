@@ -20,6 +20,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <nav className="flex items-center gap-6 text-sm font-medium">
               <Link href="/companies" className="hover:text-indigo">채용공고</Link>
               <Link href="/me" className="hover:text-indigo">마이페이지</Link>
+              <span className="h-4 w-px bg-line" />
+              <Link href="/biz" className="text-muted hover:text-indigo text-xs">기업 데모</Link>
+              <Link href="/admin" className="text-muted hover:text-indigo text-xs">관리자 데모</Link>
               <Link href="/login" className="rounded-full bg-indigo text-white px-4 py-2">로그인</Link>
             </nav>
           </div>
