@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { type ReactNode } from "react";
+import { Logo } from "@/components/Logo";
 
 const NAV = [
   { href: "/admin", label: "대시보드", icon: "▦" },
@@ -13,10 +14,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     <div className="flex min-h-screen">
       {/* 사이드바 */}
       <aside className="w-52 border-r border-line flex flex-col py-8 px-4 shrink-0 bg-white">
-        <Link href="/" className="font-extrabold text-base tracking-tight mb-1 inline-block">
-          <span className="text-indigo">잡매칭</span>
-          <span className="ml-1 inline-block w-2 h-2 rounded-full bg-lime align-middle" />
-        </Link>
+        <Logo iconSize={24} />
         <p className="text-xs text-muted mb-8">관리자 콘솔</p>
         <nav className="space-y-1">
           {NAV.map((n) => (

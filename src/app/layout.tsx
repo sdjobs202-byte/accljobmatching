@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Logo } from "@/components/Logo";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -13,10 +14,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen flex flex-col">
         <header className="border-b border-line">
           <div className="mx-auto max-w-6xl px-5 h-16 flex items-center justify-between">
-            <Link href="/" className="font-extrabold text-lg tracking-tight">
-              <span className="text-indigo">잡매칭</span>
-              <span className="ml-1 inline-block w-2 h-2 rounded-full bg-lime align-middle" />
-            </Link>
+            <Logo />
             <nav className="flex items-center gap-6 text-sm font-medium">
               <Link href="/companies" className="hover:text-indigo">채용공고</Link>
               <Link href="/me" className="hover:text-indigo">마이페이지</Link>

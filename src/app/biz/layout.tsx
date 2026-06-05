@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { type ReactNode } from "react";
+import { Logo } from "@/components/Logo";
 
 export default function BizLayout({ children }: { children: ReactNode }) {
   return (
@@ -7,10 +8,7 @@ export default function BizLayout({ children }: { children: ReactNode }) {
       <header className="border-b border-line bg-white sticky top-0 z-10">
         <div className="mx-auto max-w-6xl px-5 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <Link href="/" className="font-extrabold text-lg tracking-tight">
-              <span className="text-indigo">잡매칭</span>
-              <span className="ml-1 inline-block w-2 h-2 rounded-full bg-lime align-middle" />
-            </Link>
+            <Logo />
             <nav className="flex items-center gap-4 text-sm font-medium">
               <Link href="/biz" className="hover:text-indigo">대시보드</Link>
               <Link href="/biz/jobs/new" className="hover:text-indigo">공고 등록</Link>

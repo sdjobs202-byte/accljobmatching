@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- 배경: 딥 인디고 라운드 스퀘어 -->
+  <rect width="100" height="100" rx="22" fill="#2436C7"/>
+
+  <!-- 왼쪽 경로: 학생 → 매칭 포인트 -->
+  <path d="M22 26 C24 52 38 64 50 73" stroke="white" stroke-width="10" fill="none" stroke-linecap="round"/>
+
+  <!-- 오른쪽 경로: 기업 → 매칭 포인트 -->
+  <path d="M78 26 C76 52 62 64 50 73" stroke="white" stroke-width="10" fill="none" stroke-linecap="round"/>
+
+  <!-- 학생 노드 (상단 좌) -->
+  <circle cx="22" cy="26" r="9" fill="white"/>
+
+  <!-- 기업 노드 (상단 우) -->
+  <circle cx="78" cy="26" r="9" fill="white"/>
+
+  <!-- 매칭 포인트 (라임) -->
+  <circle cx="50" cy="73" r="12" fill="#C6F432"/>
+</svg>
