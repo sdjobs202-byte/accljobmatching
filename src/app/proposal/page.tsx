@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export const metadata = {
   title: "개발 견적·제안서 — 대학생-기업 잡매칭 웹앱 | 스마택트",
-  description: "대학생-기업 잡매칭 플랫폼 개발 견적 및 제안 (스마택트 → 커리어웨이)",
+  description: "대학생-기업 잡매칭 플랫폼 개발 견적 및 제안 (스마택트 → ACCL AI 커리어콘텐츠 연구소)",
 };
 
 // ── 작은 조립 블록 ─────────────────────────────
@@ -72,7 +72,7 @@ export default function Proposal() {
         <div className="mt-12 grid sm:grid-cols-2 gap-4 max-w-2xl">
           <div className="rounded-[18px] border border-line p-6">
             <div className="text-xs text-muted">받는 곳 (발주)</div>
-            <div className="mt-1 text-xl font-bold">커리어웨이</div>
+            <div className="mt-1 text-xl font-bold">ACCL AI 커리어콘텐츠 연구소</div>
             <div className="text-sm text-muted">강희승 대표님 귀하</div>
           </div>
           <div className="rounded-[18px] border border-line p-6">
@@ -95,7 +95,7 @@ export default function Proposal() {
           AI가 적합도와 한 줄 이유까지 — 지원부터 면접 확정까지 한 흐름으로 잇습니다.
         </p>
         <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-          {[["발주", "커리어웨이"], ["개발", "스마택트"], ["형태", "반응형 웹앱"], ["기간", "약 6~7주(2안)"]].map(([k, v]) => (
+          {[["발주", "ACCL AI 커리어콘텐츠 연구소"], ["개발", "스마택트"], ["형태", "반응형 웹앱"], ["기간", "약 6~7주(2안)"]].map(([k, v]) => (
             <div key={k} className="rounded-xl border border-line p-4">
               <div className="text-muted text-xs">{k}</div>
               <div className="font-bold mt-1">{v}</div>

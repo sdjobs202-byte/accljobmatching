@@ -1,6 +1,6 @@
 # 대학생-기업 잡매칭 웹앱 (MVP v1)
 
-발주: 커리어웨이 · 개발: 스마택트. 대학생 ↔ 기업 채용 매칭 플랫폼. 조건필터(2안) + Claude AI 보조 점수.
+발주: ACCL AI 커리어콘텐츠 연구소 · 개발: 스마택트. 대학생 ↔ 기업 채용 매칭 플랫폼. 조건필터(2안) + Claude AI 보조 점수.
 기획 전문은 [PLAN.md](./PLAN.md), DB 스키마는 [supabase/schema.sql](./supabase/schema.sql).
 
 ## 스택
