@@ -1,32 +1,30 @@
 import Link from "next/link";
-import { MOCK_COMPANIES, MOCK_JOBS } from "@/lib/mock";
 import { EMPLOYMENT_LABEL } from "@/lib/types";
+import { getBizDashboard } from "@/lib/data";
 
-const MY_COMPANY = MOCK_COMPANIES[0];
-const MY_JOBS = MOCK_JOBS.filter((j) => j.companyId === MY_COMPANY.id);
+export default async function BizDashboard() {
+  const { company, jobs, totalApplicants, confirmedCount, recent } = await getBizDashboard();
 
-const APPLICANT_COUNTS: Record<string, number> = { j1: 14, j2: 7, j3: 22, j4: 11 };
-
-const RECENT_ACTIVITY = [
-  { name: "김도윤", action: "지원 접수", jobTitle: "CNC 가공 엔지니어", at: "10분 전" },
-  { name: "이서연", action: "서류 검토 완료", jobTitle: "CNC 가공 엔지니어", at: "2시간 전" },
-  { name: "박지훈", action: "면접 확정", jobTitle: "배터리 품질 분석원", at: "어제" },
-  { name: "최수민", action: "지원 접수", jobTitle: "CNC 가공 엔지니어", at: "어제" },
-];
-
-export default function BizDashboard() {
-  const totalApplicants = MY_JOBS.reduce((s, j) => s + (APPLICANT_COUNTS[j.id] ?? 0), 0);
+  if (!company) {
+    return (
+      <div className="mx-auto max-w-md px-5 py-20 text-center">
+        <h1 className="text-2xl font-bold mb-3">기업 정보가 없습니다</h1>
+        <p className="text-sm text-muted mb-6">기업 회원으로 로그인하고 회사 정보를 등록해주세요.</p>
+        <Link href="/onboarding" className="rounded-full bg-indigo text-white px-6 py-3 font-semibold">회사 정보 등록</Link>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-5xl px-5 py-12">
       {/* 기업 헤더 */}
       <div className="flex items-center gap-4 mb-10">
         <div className="w-14 h-14 rounded-2xl bg-indigo-soft flex items-center justify-center text-indigo font-extrabold text-2xl">
-          {MY_COMPANY.name[0]}
+          {company.name[0]}
         </div>
         <div>
-          <h1 className="text-2xl font-bold">{MY_COMPANY.name}</h1>
-          <p className="text-sm text-muted">{MY_COMPANY.industry} · {MY_COMPANY.region}</p>
+          <h1 className="text-2xl font-bold">{company.name}</h1>
+          <p className="text-sm text-muted">{company.industry} · {company.region}</p>
         </div>
         <Link
           href="/biz/jobs/new"
@@ -39,9 +37,9 @@ export default function BizDashboard() {
       {/* KPI 카드 */}
       <div className="grid grid-cols-3 gap-4 mb-12">
         {[
-          { label: "등록 공고", value: MY_JOBS.length },
+          { label: "등록 공고", value: jobs.length },
           { label: "총 지원자", value: totalApplicants },
-          { label: "면접 확정", value: 3 },
+          { label: "면접 확정", value: confirmedCount },
         ].map((k) => (
           <div key={k.label} className="rounded-[18px] border border-line p-6">
             <div className="text-3xl font-extrabold text-indigo">{k.value}</div>
@@ -54,7 +52,12 @@ export default function BizDashboard() {
         {/* 공고 목록 */}
         <div className="lg:col-span-2 space-y-3">
           <h2 className="font-bold mb-4">내 공고</h2>
-          {MY_JOBS.map((job) => (
+          {jobs.length === 0 && (
+            <p className="text-sm text-muted rounded-[18px] border border-line p-5">
+              아직 등록한 공고가 없어요. 아래에서 첫 공고를 등록해보세요.
+            </p>
+          )}
+          {jobs.map((job) => (
             <div key={job.id} className="rounded-[18px] border border-line p-5 flex items-center justify-between">
               <div>
                 <div className="font-semibold">{job.title}</div>
@@ -63,9 +66,7 @@ export default function BizDashboard() {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-sm font-bold text-indigo">
-                  {APPLICANT_COUNTS[job.id] ?? 0}명
-                </span>
+                <span className="text-sm font-bold text-indigo">{job.applicantCount}명</span>
                 <Link
                   href={`/biz/applicants/${job.id}`}
                   className="rounded-full border border-indigo text-indigo px-4 py-1.5 text-sm font-semibold hover:bg-indigo hover:text-white transition-colors"
@@ -87,7 +88,8 @@ export default function BizDashboard() {
         <div>
           <h2 className="font-bold mb-4">최근 활동</h2>
           <div className="space-y-2">
-            {RECENT_ACTIVITY.map((a, i) => (
+            {recent.length === 0 && <p className="text-sm text-muted">아직 활동이 없습니다.</p>}
+            {recent.map((a, i) => (
               <div key={i} className="rounded-xl border border-line p-4">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-sm font-semibold">{a.name}</span>

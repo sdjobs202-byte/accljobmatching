@@ -1,17 +1,20 @@
-import { MOCK_COMPANIES, MOCK_JOBS } from "@/lib/mock";
+import { getAdminStats } from "@/lib/data";
 
-export default function AdminDashboard() {
-  // 데모 KPI (실제: Supabase 집계 쿼리)
+export default async function AdminDashboard() {
+  const stats = await getAdminStats();
   const kpi = [
-    { label: "학생 회원", value: 412 },
-    { label: "채용 기업", value: MOCK_COMPANIES.length },
-    { label: "열린 공고", value: MOCK_JOBS.length },
-    { label: "면접 확정", value: 37 },
+    { label: "학생 회원", value: stats.students },
+    { label: "채용 기업", value: stats.companies },
+    { label: "열린 공고", value: stats.jobs },
+    { label: "면접 확정", value: stats.funnel.interview_confirmed },
   ];
   const funnel = [
-    ["지원 접수", 540], ["서류 검토", 310], ["면접 확정", 120], ["최종 합격", 41],
+    ["지원 접수", stats.applications],
+    ["서류 검토", stats.funnel.reviewing + stats.funnel.interview_confirmed + stats.funnel.hired],
+    ["면접 확정", stats.funnel.interview_confirmed + stats.funnel.hired],
+    ["최종 합격", stats.funnel.hired],
   ] as const;
-  const max = funnel[0][1];
+  const max = Math.max(funnel[0][1], 1);
 
   return (
     <div className="mx-auto max-w-5xl px-5 py-12">
@@ -33,11 +36,14 @@ export default function AdminDashboard() {
             <span className="w-24 text-sm text-muted">{label}</span>
             <div className="flex-1 h-7 rounded-full bg-indigo-soft overflow-hidden">
               <div className="h-full bg-indigo flex items-center justify-end pr-3 text-white text-xs font-semibold"
-                style={{ width: `${(n / max) * 100}%` }}>{n}</div>
+                style={{ width: `${Math.max((n / max) * 100, 8)}%` }}>{n}</div>
             </div>
           </div>
         ))}
       </div>
+      {stats.applications === 0 && (
+        <p className="mt-8 text-sm text-muted">아직 지원 데이터가 없습니다.</p>
+      )}
     </div>
   );
 }

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { type ReactNode } from "react";
 import { Logo } from "@/components/Logo";
+import { getSessionProfile } from "@/lib/auth";
+import { isSupabaseEnabled } from "@/lib/supabase/admin";
 
 const NAV = [
   { href: "/admin", label: "대시보드", icon: "▦" },
@@ -9,7 +11,25 @@ const NAV = [
   { href: "/admin/matches", label: "매칭 현황", icon: "⚡" },
 ];
 
-export default function AdminLayout({ children }: { children: ReactNode }) {
+export default async function AdminLayout({ children }: { children: ReactNode }) {
+  // 관리자 접근 가드 (Supabase 연동 시에만 적용)
+  if (isSupabaseEnabled()) {
+    const profile = await getSessionProfile();
+    if (profile?.role !== "admin") {
+      return (
+        <div className="mx-auto max-w-md px-5 py-24 text-center">
+          <h1 className="text-2xl font-bold mb-3">관리자 전용</h1>
+          <p className="text-sm text-muted mb-6">
+            이 영역은 관리자 계정으로만 접근할 수 있습니다.<br />관리자 계정으로 로그인해주세요.
+          </p>
+          <Link href="/login" className="rounded-full bg-indigo text-white px-6 py-3 font-semibold">
+            로그인
+          </Link>
+        </div>
+      );
+    }
+  }
+
   return (
     <div className="flex min-h-screen">
       {/* 사이드바 */}
