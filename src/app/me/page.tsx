@@ -1,41 +1,43 @@
 import Link from "next/link";
-import { MOCK_JOBS, MOCK_STUDENT, companyById } from "@/lib/mock";
+import { MOCK_STUDENT } from "@/lib/mock";
 import { rankJobs } from "@/lib/matching";
 import { STATUS_LABEL, type AppStatus } from "@/lib/types";
-
-// 데모용 지원 현황 (실제: applications 테이블)
-const MY_APPS: { jobId: string; status: AppStatus }[] = [
-  { jobId: "j1", status: "interview_confirmed" },
-  { jobId: "j3", status: "reviewing" },
-];
+import { getMyApplications, getMyStudentProfile, getOpenJobs, getCompanies } from "@/lib/data";
 
 const badgeClass: Record<AppStatus, string> = {
   submitted: "badge-submitted", reviewing: "badge-reviewing",
   interview_confirmed: "badge-confirmed", rejected: "badge-rejected", hired: "badge-confirmed",
 };
 
-export default function MyPage() {
-  const recommended = rankJobs(MOCK_STUDENT, MOCK_JOBS).slice(0, 3);
+export default async function MyPage() {
+  const student = (await getMyStudentProfile()) ?? MOCK_STUDENT;
+  const apps = await getMyApplications();
+  const jobs = await getOpenJobs();
+  const companies = await getCompanies();
+  const companyById = (id: string) => companies.find((c) => c.id === id);
+  const recommended = rankJobs(student, jobs).slice(0, 3);
+
   return (
     <div className="mx-auto max-w-4xl px-5 py-12">
-      <h1 className="hail text-3xl">{MOCK_STUDENT.name}님의 여정.</h1>
-      <p className="text-sm text-muted mt-1 mb-10">{MOCK_STUDENT.dept} · {MOCK_STUDENT.region}</p>
+      <h1 className="hail text-3xl">{student.name}님의 여정.</h1>
+      <p className="text-sm text-muted mt-1 mb-10">{student.dept} · {student.region}</p>
 
       <h2 className="font-bold mb-3">지원 현황</h2>
       <div className="space-y-3 mb-12">
-        {MY_APPS.map((a) => {
-          const job = MOCK_JOBS.find((j) => j.id === a.jobId)!;
-          const co = companyById(job.companyId);
-          return (
-            <div key={a.jobId} className="flex items-center justify-between rounded-xl border border-line p-4">
-              <div>
-                <div className="font-semibold">{job.title}</div>
-                <div className="text-sm text-muted">{co?.name}</div>
-              </div>
-              <span className={`badge ${badgeClass[a.status]}`}>{STATUS_LABEL[a.status]}</span>
+        {apps.length === 0 && (
+          <p className="text-sm text-muted rounded-xl border border-line p-4">
+            아직 지원한 공고가 없어요. <Link href="/companies" className="text-indigo font-semibold">공고 보러가기</Link>
+          </p>
+        )}
+        {apps.map((a) => (
+          <div key={a.id} className="flex items-center justify-between rounded-xl border border-line p-4">
+            <div>
+              <div className="font-semibold">{a.jobTitle}</div>
+              <div className="text-sm text-muted">{a.companyName}</div>
             </div>
-          );
-        })}
+            <span className={`badge ${badgeClass[a.status]}`}>{STATUS_LABEL[a.status]}</span>
+          </div>
+        ))}
       </div>
 
       <h2 className="font-bold mb-3">너에게 맞는 추천 공고</h2>

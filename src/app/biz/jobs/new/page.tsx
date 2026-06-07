@@ -1,6 +1,8 @@
 "use client";
 import { useState } from "react";
+import { useActionState } from "react";
 import { EMPLOYMENT_LABEL, type EmploymentType } from "@/lib/types";
+import { createJob, type ActionState } from "@/lib/actions";
 
 const SKILL_OPTIONS = [
   "CNC", "캐드", "측정", "PLC", "전기제어", "협동로봇",
@@ -13,6 +15,7 @@ const REGIONS = ["성남", "판교", "용인", "수원", "서울", "기타"];
 export default function NewJobPage() {
   const [skills, setSkills] = useState<string[]>([]);
   const [customSkill, setCustomSkill] = useState("");
+  const [state, formAction, pending] = useActionState<ActionState, FormData>(createJob, {});
 
   const toggleSkill = (s: string) =>
     setSkills((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
@@ -30,12 +33,15 @@ export default function NewJobPage() {
       <h1 className="hail text-3xl mb-1">좋은 사람, 여기서 만난다.</h1>
       <p className="text-sm text-muted mb-10">공고를 등록하면 AI가 적합한 학생을 점수순으로 추려줍니다.</p>
 
-      <form className="space-y-7">
+      <form action={formAction} className="space-y-7">
+        {skills.map((s) => <input key={s} type="hidden" name="skills" value={s} />)}
         <div>
           <label className="text-sm font-semibold block mb-1.5">
             공고 제목 <span className="text-indigo">*</span>
           </label>
           <input
+            name="title"
+            required
             placeholder="예) CNC 가공 엔지니어 (신입)"
             className="w-full rounded-xl border border-line px-4 py-3 text-sm focus:outline-none focus:border-indigo"
           />
@@ -46,7 +52,7 @@ export default function NewJobPage() {
             <label className="text-sm font-semibold block mb-1.5">
               직무 카테고리 <span className="text-indigo">*</span>
             </label>
-            <select className="w-full rounded-xl border border-line px-4 py-3 text-sm focus:outline-none focus:border-indigo">
+            <select name="jobCategory" required className="w-full rounded-xl border border-line px-4 py-3 text-sm focus:outline-none focus:border-indigo">
               <option value="">선택</option>
               {JOB_CATEGORIES.map((c) => <option key={c}>{c}</option>)}
             </select>
@@ -55,7 +61,7 @@ export default function NewJobPage() {
             <label className="text-sm font-semibold block mb-1.5">
               고용형태 <span className="text-indigo">*</span>
             </label>
-            <select className="w-full rounded-xl border border-line px-4 py-3 text-sm focus:outline-none focus:border-indigo">
+            <select name="employmentType" className="w-full rounded-xl border border-line px-4 py-3 text-sm focus:outline-none focus:border-indigo">
               {(Object.entries(EMPLOYMENT_LABEL) as [EmploymentType, string][]).map(([k, v]) => (
                 <option key={k} value={k}>{v}</option>
               ))}
@@ -67,7 +73,7 @@ export default function NewJobPage() {
           <label className="text-sm font-semibold block mb-1.5">
             근무 지역 <span className="text-indigo">*</span>
           </label>
-          <select className="w-full rounded-xl border border-line px-4 py-3 text-sm focus:outline-none focus:border-indigo">
+          <select name="region" className="w-full rounded-xl border border-line px-4 py-3 text-sm focus:outline-none focus:border-indigo">
             {REGIONS.map((r) => <option key={r}>{r}</option>)}
           </select>
         </div>
@@ -131,6 +137,7 @@ export default function NewJobPage() {
             공고 상세 내용 <span className="text-indigo">*</span>
           </label>
           <textarea
+            name="description"
             rows={6}
             placeholder="주요 업무, 자격 요건, 우대사항 등을 자유롭게 작성해주세요"
             className="w-full rounded-xl border border-line px-4 py-3 text-sm focus:outline-none focus:border-indigo resize-none"
@@ -156,18 +163,14 @@ export default function NewJobPage() {
           </div>
         </div>
 
+        {state.error && <p className="text-sm text-red-500">{state.error}</p>}
         <div className="flex gap-3 pt-2">
           <button
             type="submit"
-            className="flex-1 rounded-xl bg-indigo text-white py-3.5 font-semibold text-base hover:bg-indigo/90 transition-colors"
+            disabled={pending}
+            className="flex-1 rounded-xl bg-indigo text-white py-3.5 font-semibold text-base hover:bg-indigo/90 transition-colors disabled:opacity-60"
           >
-            공고 등록
-          </button>
-          <button
-            type="button"
-            className="rounded-xl border border-line px-6 py-3.5 text-sm font-semibold text-muted hover:border-indigo hover:text-indigo transition-colors"
-          >
-            임시저장
+            {pending ? "등록 중…" : "공고 등록"}
           </button>
         </div>
         <p className="text-xs text-muted text-center">

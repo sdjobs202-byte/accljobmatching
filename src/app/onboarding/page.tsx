@@ -1,5 +1,7 @@
 "use client";
 import { useState } from "react";
+import { useActionState } from "react";
+import { saveStudentProfile, saveCompanyProfile, type ActionState } from "@/lib/actions";
 
 const SKILL_OPTIONS = [
   "CNC", "캐드", "측정", "PLC", "전기제어", "협동로봇",
@@ -15,6 +17,8 @@ export default function OnboardingPage() {
   const [role, setRole] = useState<"student" | "company">("student");
   const [skills, setSkills] = useState<string[]>([]);
   const [jobs, setJobs] = useState<string[]>([]);
+  const [studentState, studentAction, studentPending] = useActionState<ActionState, FormData>(saveStudentProfile, {});
+  const [companyState, companyAction, companyPending] = useActionState<ActionState, FormData>(saveCompanyProfile, {});
 
   const toggle = (arr: string[], item: string, set: (v: string[]) => void) =>
     set(arr.includes(item) ? arr.filter((x) => x !== item) : [...arr, item]);
@@ -43,15 +47,19 @@ export default function OnboardingPage() {
       </div>
 
       {role === "student" ? (
-        <form className="space-y-7">
+        <form action={studentAction} className="space-y-7">
+          {/* 선택 태그를 서버로 전송 */}
+          {skills.map((s) => <input key={s} type="hidden" name="skills" value={s} />)}
+          {jobs.map((j) => <input key={j} type="hidden" name="desiredJobs" value={j} />)}
+
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-semibold block mb-1.5">학과 <span className="text-indigo">*</span></label>
-              <input placeholder="스마트기계과" className="w-full rounded-xl border border-line px-4 py-3 text-sm focus:outline-none focus:border-indigo" />
+              <input name="dept" required placeholder="스마트기계과" className="w-full rounded-xl border border-line px-4 py-3 text-sm focus:outline-none focus:border-indigo" />
             </div>
             <div>
               <label className="text-sm font-semibold block mb-1.5">졸업 예정년도 <span className="text-indigo">*</span></label>
-              <select className="w-full rounded-xl border border-line px-4 py-3 text-sm focus:outline-none focus:border-indigo">
+              <select name="gradYear" className="w-full rounded-xl border border-line px-4 py-3 text-sm focus:outline-none focus:border-indigo">
                 {GRAD_YEARS.map((y) => <option key={y}>{y}</option>)}
               </select>
             </div>
@@ -59,7 +67,7 @@ export default function OnboardingPage() {
 
           <div>
             <label className="text-sm font-semibold block mb-1.5">거주 지역 <span className="text-indigo">*</span></label>
-            <select className="w-full rounded-xl border border-line px-4 py-3 text-sm focus:outline-none focus:border-indigo">
+            <select name="region" className="w-full rounded-xl border border-line px-4 py-3 text-sm focus:outline-none focus:border-indigo">
               {REGIONS.map((r) => <option key={r}>{r}</option>)}
             </select>
           </div>
@@ -111,26 +119,28 @@ export default function OnboardingPage() {
           <div>
             <label className="text-sm font-semibold block mb-1.5">한 줄 자기소개 (선택)</label>
             <textarea
+              name="intro"
               rows={3}
               placeholder="강점이나 관심 분야를 한 줄로 적어주세요"
               className="w-full rounded-xl border border-line px-4 py-3 text-sm focus:outline-none focus:border-indigo resize-none"
             />
           </div>
 
-          <button className="w-full rounded-xl bg-indigo text-white py-3.5 font-semibold text-base hover:bg-indigo/90 transition-colors">
-            프로필 저장하고 시작
+          {studentState.error && <p className="text-sm text-red-500">{studentState.error}</p>}
+          <button disabled={studentPending} className="w-full rounded-xl bg-indigo text-white py-3.5 font-semibold text-base hover:bg-indigo/90 transition-colors disabled:opacity-60">
+            {studentPending ? "저장 중…" : "프로필 저장하고 시작"}
           </button>
         </form>
       ) : (
-        <form className="space-y-7">
+        <form action={companyAction} className="space-y-7">
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-semibold block mb-1.5">회사명 <span className="text-indigo">*</span></label>
-              <input placeholder="한빛정밀" className="w-full rounded-xl border border-line px-4 py-3 text-sm focus:outline-none focus:border-indigo" />
+              <input name="name" required placeholder="한빛정밀" className="w-full rounded-xl border border-line px-4 py-3 text-sm focus:outline-none focus:border-indigo" />
             </div>
             <div>
               <label className="text-sm font-semibold block mb-1.5">업종 <span className="text-indigo">*</span></label>
-              <select className="w-full rounded-xl border border-line px-4 py-3 text-sm focus:outline-none focus:border-indigo">
+              <select name="industry" className="w-full rounded-xl border border-line px-4 py-3 text-sm focus:outline-none focus:border-indigo">
                 {INDUSTRY_OPTIONS.map((i) => <option key={i}>{i}</option>)}
               </select>
             </div>
@@ -138,7 +148,7 @@ export default function OnboardingPage() {
 
           <div>
             <label className="text-sm font-semibold block mb-1.5">사업장 소재지 <span className="text-indigo">*</span></label>
-            <select className="w-full rounded-xl border border-line px-4 py-3 text-sm focus:outline-none focus:border-indigo">
+            <select name="region" className="w-full rounded-xl border border-line px-4 py-3 text-sm focus:outline-none focus:border-indigo">
               {REGIONS.map((r) => <option key={r}>{r}</option>)}
             </select>
           </div>
@@ -146,6 +156,7 @@ export default function OnboardingPage() {
           <div>
             <label className="text-sm font-semibold block mb-1.5">회사 소개 <span className="text-indigo">*</span></label>
             <textarea
+              name="intro"
               rows={4}
               placeholder="강소기업으로서의 강점, 주요 사업 내용을 자유롭게 적어주세요"
               className="w-full rounded-xl border border-line px-4 py-3 text-sm focus:outline-none focus:border-indigo resize-none"
@@ -155,6 +166,7 @@ export default function OnboardingPage() {
           <div>
             <label className="text-sm font-semibold block mb-1.5">복리후생 / 우대사항</label>
             <input
+              name="perks"
               placeholder="기숙사·자격수당·정규전환"
               className="w-full rounded-xl border border-line px-4 py-3 text-sm focus:outline-none focus:border-indigo"
             />
@@ -163,13 +175,15 @@ export default function OnboardingPage() {
           <div>
             <label className="text-sm font-semibold block mb-1.5">채용담당자 연락처 <span className="text-indigo">*</span></label>
             <input
+              name="phone"
               placeholder="010-0000-0000"
               className="w-full rounded-xl border border-line px-4 py-3 text-sm focus:outline-none focus:border-indigo"
             />
           </div>
 
-          <button className="w-full rounded-xl bg-indigo text-white py-3.5 font-semibold text-base hover:bg-indigo/90 transition-colors">
-            회사 정보 저장하고 시작
+          {companyState.error && <p className="text-sm text-red-500">{companyState.error}</p>}
+          <button disabled={companyPending} className="w-full rounded-xl bg-indigo text-white py-3.5 font-semibold text-base hover:bg-indigo/90 transition-colors disabled:opacity-60">
+            {companyPending ? "저장 중…" : "회사 정보 저장하고 시작"}
           </button>
         </form>
       )}

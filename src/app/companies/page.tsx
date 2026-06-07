@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { MOCK_JOBS, MOCK_STUDENT, companyById } from "@/lib/mock";
+import { MOCK_STUDENT } from "@/lib/mock";
 import { rankJobs } from "@/lib/matching";
 import { EMPLOYMENT_LABEL } from "@/lib/types";
+import { getOpenJobs, getCompanies, getMyStudentProfile } from "@/lib/data";
 
 export default async function CompaniesPage({
   searchParams,
@@ -9,19 +10,24 @@ export default async function CompaniesPage({
   searchParams: Promise<{ q?: string; cat?: string; region?: string }>;
 }) {
   const sp = await searchParams;
-  let jobs = MOCK_JOBS;
+  const allJobs = await getOpenJobs();
+  const companies = await getCompanies();
+  const companyById = (id: string) => companies.find((c) => c.id === id);
+
+  let jobs = allJobs;
   if (sp.cat) jobs = jobs.filter((j) => j.jobCategory === sp.cat);
   if (sp.region) jobs = jobs.filter((j) => j.region === sp.region);
   if (sp.q) jobs = jobs.filter((j) => j.title.includes(sp.q!));
 
-  // 로그인 학생 기준 적합도 정렬 (데모: MOCK_STUDENT)
-  const ranked = rankJobs(MOCK_STUDENT, jobs);
-  const categories = [...new Set(MOCK_JOBS.map((j) => j.jobCategory))];
+  // 로그인 학생 프로필 기준 적합도 정렬 (미로그인 시 데모 학생)
+  const student = (await getMyStudentProfile()) ?? MOCK_STUDENT;
+  const ranked = rankJobs(student, jobs);
+  const categories = [...new Set(allJobs.map((j) => j.jobCategory))];
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-12">
       <h1 className="hail text-3xl mb-2">너에게 맞는 자리부터.</h1>
-      <p className="text-muted text-sm mb-8">{MOCK_STUDENT.name}님 프로필 기준 적합도순 정렬</p>
+      <p className="text-muted text-sm mb-8">{student.name}님 프로필 기준 적합도순 정렬</p>
 
       {/* 필터 */}
       <form className="flex flex-wrap gap-2 mb-8">

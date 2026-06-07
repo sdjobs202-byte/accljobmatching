@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { companyById, jobsByCompany, MOCK_STUDENT } from "@/lib/mock";
+import { MOCK_STUDENT } from "@/lib/mock";
 import { matchOne } from "@/lib/matching";
 import { EMPLOYMENT_LABEL } from "@/lib/types";
+import { getCompanyById, getJobsByCompany, getMyStudentProfile } from "@/lib/data";
 
 export default async function CompanyDetail({
   params,
@@ -13,11 +14,12 @@ export default async function CompanyDetail({
 }) {
   const { id } = await params;
   const sp = await searchParams;
-  const company = companyById(id);
+  const company = await getCompanyById(id);
   if (!company) notFound();
 
-  const jobs = jobsByCompany(id);
+  const jobs = await getJobsByCompany(id);
   const active = jobs.find((j) => j.id === sp.job) ?? jobs[0];
+  const student = (await getMyStudentProfile()) ?? MOCK_STUDENT;
 
   return (
     <div className="mx-auto max-w-4xl px-5 py-12">
@@ -47,7 +49,7 @@ export default async function CompanyDetail({
       </div>
 
       {active && (() => {
-        const m = matchOne(MOCK_STUDENT, active);
+        const m = matchOne(student, active);
         return (
           <div className="mt-6 rounded-[18px] border border-line p-7">
             <div className="flex items-center justify-between">
