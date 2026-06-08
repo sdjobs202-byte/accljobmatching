@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Logo } from "@/components/Logo";
+import Header from "@/components/Header";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -12,19 +12,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ko">
       <body className="min-h-screen flex flex-col">
-        <header className="border-b border-line">
-          <div className="mx-auto max-w-6xl px-5 h-16 flex items-center justify-between">
-            <Logo />
-            <nav className="flex items-center gap-6 text-sm font-medium">
-              <Link href="/companies" className="hover:text-indigo">채용공고</Link>
-              <Link href="/me" className="hover:text-indigo">마이페이지</Link>
-              <span className="h-4 w-px bg-line" />
-              <Link href="/biz" className="text-muted hover:text-indigo text-xs">기업 데모</Link>
-              <Link href="/admin" className="text-muted hover:text-indigo text-xs">관리자 데모</Link>
-              <Link href="/login" className="rounded-full bg-indigo text-white px-4 py-2">로그인</Link>
-            </nav>
-          </div>
-        </header>
+        <Header />
         <main className="flex-1">{children}</main>
         <footer className="border-t border-line py-10 text-xs text-muted">
           <div className="mx-auto max-w-6xl px-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

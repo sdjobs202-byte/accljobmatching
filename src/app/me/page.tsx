@@ -1,8 +1,11 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { MOCK_STUDENT } from "@/lib/mock";
 import { rankJobs } from "@/lib/matching";
 import { STATUS_LABEL, type AppStatus } from "@/lib/types";
 import { getMyApplications, getMyStudentProfile, getOpenJobs, getCompanies } from "@/lib/data";
+import { getSessionUser } from "@/lib/auth";
+import { isSupabaseEnabled } from "@/lib/supabase/admin";
 
 const badgeClass: Record<AppStatus, string> = {
   submitted: "badge-submitted", reviewing: "badge-reviewing",
@@ -10,6 +13,10 @@ const badgeClass: Record<AppStatus, string> = {
 };
 
 export default async function MyPage() {
+  // 로그인 필수 (Supabase 연동 시). 미로그인 → 로그인 페이지
+  if (isSupabaseEnabled() && !(await getSessionUser())) {
+    redirect("/login");
+  }
   const student = (await getMyStudentProfile()) ?? MOCK_STUDENT;
   const apps = await getMyApplications();
   const jobs = await getOpenJobs();
