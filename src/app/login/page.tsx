@@ -16,6 +16,7 @@ export default function LoginPage() {
         <input name="password" type="password" required placeholder="비밀번호"
           className="w-full rounded-xl border border-line px-4 py-3" />
         {state.error && <p className="text-sm text-red-500">{state.error}</p>}
+        {state.notice && <p className="text-sm text-emerald-600">{state.notice}</p>}
         <button disabled={pending}
           className="w-full rounded-xl bg-indigo text-white py-3 font-semibold disabled:opacity-60">
           {pending ? "로그인 중…" : "로그인"}

@@ -17,6 +17,7 @@ export default function SignupForm({ isCompany }: { isCompany: boolean }) {
         <input type="checkbox" required className="mt-0.5" /> 개인정보 수집·이용에 동의합니다. (필수)
       </label>
       {state.error && <p className="text-sm text-red-500">{state.error}</p>}
+      {state.notice && <p className="text-sm text-emerald-600">{state.notice}</p>}
       <button disabled={pending}
         className="w-full rounded-xl bg-indigo text-white py-3 font-semibold disabled:opacity-60">
         {pending ? "가입 중…" : "가입하고 프로필 작성"}

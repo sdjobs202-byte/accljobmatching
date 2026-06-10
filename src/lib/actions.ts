@@ -9,8 +9,8 @@ import type { Role, EmploymentType, AppStatus } from "./types";
 
 import { cookies } from "next/headers";
 
-/** 액션 결과 — 폼에서 에러 메시지 표시용 */
-export type ActionState = { error?: string; ok?: boolean };
+/** 액션 결과 — 폼에서 에러/안내 메시지 표시용 */
+export type ActionState = { error?: string; ok?: boolean; notice?: string };
 
 /**
  * 목업 세션/프로필 쿠키 옵션.
@@ -71,12 +71,18 @@ export async function signUp(_prev: ActionState, formData: FormData): Promise<Ac
   }
 
   // 가입 — role/name은 user_metadata로 전달(handle_new_user 트리거가 profiles 생성)
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: { data: { role, name } },
   });
   if (error) return { error: error.message };
+
+  // 이메일 인증(Confirm email)이 켜져 있으면 세션이 없다 → 온보딩으로 보내면 /login으로 튕긴다.
+  // 이 경우 인증 메일 안내를 보여주고 멈춘다.
+  if (!data.session) {
+    return { notice: "가입이 접수되었습니다. 메일로 받은 인증 링크를 클릭한 뒤 로그인해주세요." };
+  }
 
   redirect("/onboarding");
 }
@@ -111,7 +117,13 @@ export async function signIn(_prev: ActionState, formData: FormData): Promise<Ac
   }
 
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return { error: "이메일 또는 비밀번호가 올바르지 않습니다." };
+  if (error) {
+    // 이메일 인증 미완료를 비밀번호 오류로 오인하지 않도록 구분 안내
+    if (error.code === "email_not_confirmed" || /not confirmed/i.test(error.message)) {
+      return { error: "이메일 인증이 완료되지 않았습니다. 가입 시 받은 인증 메일의 링크를 클릭한 뒤 다시 로그인해주세요." };
+    }
+    return { error: "이메일 또는 비밀번호가 올바르지 않습니다." };
+  }
 
   // 역할별 첫 화면 분기 (프로필 행이 없으면 가입 시 저장한 메타데이터 role로 폴백)
   const { data: prof } = await supabase
