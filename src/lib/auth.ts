@@ -58,7 +58,16 @@ export async function getSessionProfile(): Promise<SessionProfile | null> {
     .from("profiles")
     .select("id, role, name, phone, status")
     .eq("id", auth.user.id)
-    .single();
-  return (data as SessionProfile) ?? null;
+    .maybeSingle(); // single()은 0행이면 에러 → maybeSingle()로 null 허용
+  if (data) return data as SessionProfile;
+
+  // 프로필 행이 없는 경우(가입 트리거 누락/기존 계정 등) 로그인 세션은 유효하므로
+  // 가입 시 저장한 user_metadata(role/name)로 폴백하고, 가능하면 행을 자가복구한다.
+  // → 이렇게 하지 않으면 로그인에 성공해도 가드가 /login으로 되돌려 "다시 로그인" 루프가 발생.
+  const meta = (auth.user.user_metadata ?? {}) as { role?: Role; name?: string };
+  const role: Role = meta.role ?? "student";
+  const name = meta.name ?? "";
+  await supabase.from("profiles").upsert({ id: auth.user.id, role, name });
+  return { id: auth.user.id, role, name, phone: null, status: "active" };
 }
 

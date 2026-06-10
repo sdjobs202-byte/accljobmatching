@@ -12,6 +12,19 @@ import { cookies } from "next/headers";
 /** 액션 결과 — 폼에서 에러 메시지 표시용 */
 export type ActionState = { error?: string; ok?: boolean };
 
+/**
+ * 목업 세션/프로필 쿠키 옵션.
+ * maxAge 미지정(세션 쿠키) 시 브라우저 종료로 세션이 사라져 "다시 로그인" 증상이 발생하므로 30일 유지.
+ * 서버에서만 읽으므로 httpOnly, 배포(HTTPS)에서는 secure.
+ */
+const MOCK_COOKIE = {
+  path: "/",
+  maxAge: 60 * 60 * 24 * 30,
+  httpOnly: true,
+  sameSite: "lax" as const,
+  secure: process.env.NODE_ENV === "production",
+};
+
 // ─────────────────────────────────────────────
 // 인증
 // ─────────────────────────────────────────────
@@ -51,8 +64,8 @@ export async function signUp(_prev: ActionState, formData: FormData): Promise<Ac
     };
 
     registeredList.push(mockUser);
-    cookieStore.set("mock_registered_users", JSON.stringify(registeredList), { path: "/" });
-    cookieStore.set("mock_user_session", JSON.stringify(mockUser), { path: "/" });
+    cookieStore.set("mock_registered_users", JSON.stringify(registeredList), MOCK_COOKIE);
+    cookieStore.set("mock_user_session", JSON.stringify(mockUser), MOCK_COOKIE);
 
     redirect("/onboarding");
   }
@@ -91,7 +104,7 @@ export async function signIn(_prev: ActionState, formData: FormData): Promise<Ac
       return { error: "이메일 또는 비밀번호가 올바르지 않습니다." };
     }
 
-    cookieStore.set("mock_user_session", JSON.stringify(user), { path: "/" });
+    cookieStore.set("mock_user_session", JSON.stringify(user), MOCK_COOKIE);
     
     // 역할별 첫 화면 분기
     redirect(user.role === "company" ? "/biz" : user.role === "admin" ? "/admin" : "/companies");
@@ -100,13 +113,15 @@ export async function signIn(_prev: ActionState, formData: FormData): Promise<Ac
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return { error: "이메일 또는 비밀번호가 올바르지 않습니다." };
 
-  // 역할별 첫 화면 분기
+  // 역할별 첫 화면 분기 (프로필 행이 없으면 가입 시 저장한 메타데이터 role로 폴백)
   const { data: prof } = await supabase
     .from("profiles")
     .select("role")
     .eq("id", data.user.id)
-    .single();
-  const role = (prof as { role: Role } | null)?.role ?? "student";
+    .maybeSingle();
+  const role =
+    (prof as { role: Role } | null)?.role ??
+    ((data.user.user_metadata?.role as Role) ?? "student");
   redirect(role === "company" ? "/biz" : role === "admin" ? "/admin" : "/companies");
 }
 
@@ -148,7 +163,7 @@ export async function saveStudentProfile(_prev: ActionState, formData: FormData)
       updatedAt: new Date().toISOString(),
     };
 
-    cookieStore.set(`mock_student_profile_${authUser.id}`, JSON.stringify(profile), { path: "/" });
+    cookieStore.set(`mock_student_profile_${authUser.id}`, JSON.stringify(profile), MOCK_COOKIE);
     redirect("/companies");
   }
 
@@ -181,7 +196,7 @@ export async function saveCompanyProfile(_prev: ActionState, formData: FormData)
     const phone = String(formData.get("phone") ?? "");
     if (phone) {
       authUser.phone = phone;
-      cookieStore.set("mock_user_session", JSON.stringify(authUser), { path: "/" });
+      cookieStore.set("mock_user_session", JSON.stringify(authUser), MOCK_COOKIE);
       
       // Update registry
       const registeredVal = cookieStore.get("mock_registered_users")?.value;
@@ -191,7 +206,7 @@ export async function saveCompanyProfile(_prev: ActionState, formData: FormData)
           const idx = registeredList.findIndex((u: any) => u.id === authUser.id);
           if (idx !== -1) {
             registeredList[idx].phone = phone;
-            cookieStore.set("mock_registered_users", JSON.stringify(registeredList), { path: "/" });
+            cookieStore.set("mock_registered_users", JSON.stringify(registeredList), MOCK_COOKIE);
           }
         } catch {}
       }
@@ -207,7 +222,7 @@ export async function saveCompanyProfile(_prev: ActionState, formData: FormData)
       perks: String(formData.get("perks") ?? ""),
     };
 
-    cookieStore.set(`mock_company_profile_${authUser.id}`, JSON.stringify(payload), { path: "/" });
+    cookieStore.set(`mock_company_profile_${authUser.id}`, JSON.stringify(payload), MOCK_COOKIE);
     redirect("/biz");
   }
 
