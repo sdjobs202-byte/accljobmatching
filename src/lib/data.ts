@@ -9,6 +9,7 @@ import type { Company, Job, StudentProfile, EmploymentType, AppStatus, Role } fr
 import { matchOne } from "./matching";
 import { getSessionProfile } from "./auth";
 import { createAdminClient } from "./supabase/admin";
+import { cookies } from "next/headers";
 
 /**
  * 데이터 접근 계층.
@@ -119,7 +120,19 @@ export async function getCompanyById(id: string): Promise<Company | null> {
 /** 현재 로그인 기업 사용자가 소유한 회사(없으면 null). */
 export async function getMyCompany(): Promise<Company | null> {
   const supabase = await createClient();
-  if (!supabase) return MOCK_COMPANIES[0];
+  if (!supabase) {
+    const cookieStore = await cookies();
+    const sessionVal = cookieStore.get("mock_user_session")?.value;
+    if (!sessionVal) return null;
+    try {
+      const authUser = JSON.parse(sessionVal);
+      const companyVal = cookieStore.get(`mock_company_profile_${authUser.id}`)?.value;
+      if (companyVal) {
+        return JSON.parse(companyVal);
+      }
+    } catch {}
+    return null;
+  }
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return null;
   const { data } = await supabase
@@ -143,7 +156,28 @@ type StudentRow = {
 /** 현재 로그인 학생의 프로필(매칭용). 미설정/미로그인 시 목업 학생. */
 export async function getMyStudentProfile(): Promise<StudentProfile | null> {
   const supabase = await createClient();
-  if (!supabase) return MOCK_STUDENT;
+  if (!supabase) {
+    const cookieStore = await cookies();
+    const sessionVal = cookieStore.get("mock_user_session")?.value;
+    if (!sessionVal) return null;
+    try {
+      const authUser = JSON.parse(sessionVal);
+      const profileVal = cookieStore.get(`mock_student_profile_${authUser.id}`)?.value;
+      if (profileVal) {
+        const parsed = JSON.parse(profileVal);
+        return {
+          userId: parsed.userId,
+          name: parsed.name,
+          dept: parsed.dept,
+          region: parsed.region,
+          skills: parsed.skills,
+          desiredJobs: parsed.desiredJobs,
+          intro: parsed.intro,
+        };
+      }
+    } catch {}
+    return null;
+  }
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return null;
   const { data: prof } = await supabase
