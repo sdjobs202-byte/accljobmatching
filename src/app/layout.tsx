@@ -4,8 +4,22 @@ import Header from "@/components/Header";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "잡매칭 — 다음 기회를 찾아보세요",
+  metadataBase: new URL("https://jobmatch.accl.kr"),
+  title: "잡매칭 — 다음 기회를, 너에게",
   description: "대학생과 채용기업을 잇는 잡매칭 플랫폼",
+  openGraph: {
+    title: "잡매칭 — 다음 기회를, 너에게",
+    description: "대학생과 채용기업을 잇는 잡매칭 플랫폼",
+    url: "https://jobmatch.accl.kr",
+    siteName: "잡매칭",
+    locale: "ko_KR",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "잡매칭 — 다음 기회를, 너에게",
+    description: "대학생과 채용기업을 잇는 잡매칭 플랫폼",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
