@@ -7,16 +7,28 @@ import { createAdminClient } from "./supabase/admin";
 import { notify } from "./notify";
 import type { Role, EmploymentType, AppStatus } from "./types";
 
+import { cookies } from "next/headers";
+
 /** 액션 결과 — 폼에서 에러/안내 메시지 표시용 */
-export type ActionState = { error?: string; notice?: string; ok?: boolean };
+export type ActionState = { error?: string; ok?: boolean; notice?: string };
+
+/**
+ * 목업 세션/프로필 쿠키 옵션.
+ * maxAge 미지정(세션 쿠키) 시 브라우저 종료로 세션이 사라져 "다시 로그인" 증상이 발생하므로 30일 유지.
+ * 서버에서만 읽으므로 httpOnly, 배포(HTTPS)에서는 secure.
+ */
+const MOCK_COOKIE = {
+  path: "/",
+  maxAge: 60 * 60 * 24 * 30,
+  httpOnly: true,
+  sameSite: "lax" as const,
+  secure: process.env.NODE_ENV === "production",
+};
 
 // ─────────────────────────────────────────────
 // 인증
 // ─────────────────────────────────────────────
 export async function signUp(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const supabase = await createClient();
-  if (!supabase) return { error: "서버에 Supabase가 설정되지 않았습니다(.env.local 확인)." };
-
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   const name = String(formData.get("name") ?? "").trim();
@@ -24,6 +36,39 @@ export async function signUp(_prev: ActionState, formData: FormData): Promise<Ac
 
   if (!email || !password) return { error: "이메일과 비밀번호를 입력해주세요." };
   if (password.length < 6) return { error: "비밀번호는 6자 이상이어야 합니다." };
+
+  const supabase = await createClient();
+  if (!supabase) {
+    // Mock 회원가입
+    const cookieStore = await cookies();
+    const registeredVal = cookieStore.get("mock_registered_users")?.value;
+    let registeredList: any[] = [];
+    if (registeredVal) {
+      try {
+        registeredList = JSON.parse(registeredVal);
+      } catch {}
+    }
+    
+    // 이메일 중복 체크
+    if (registeredList.some((u) => u.email === email)) {
+      return { error: "이미 가입된 이메일입니다." };
+    }
+
+    const userId = "mock-uid-" + Math.random().toString(36).substring(2, 9);
+    const mockUser = {
+      id: userId,
+      email,
+      role,
+      name,
+      phone: "",
+    };
+
+    registeredList.push(mockUser);
+    cookieStore.set("mock_registered_users", JSON.stringify(registeredList), MOCK_COOKIE);
+    cookieStore.set("mock_user_session", JSON.stringify(mockUser), MOCK_COOKIE);
+
+    redirect("/onboarding");
+  }
 
   // 가입 — role/name은 user_metadata로 전달(handle_new_user 트리거가 profiles 생성)
   const { data, error } = await supabase.auth.signUp({
@@ -33,57 +78,110 @@ export async function signUp(_prev: ActionState, formData: FormData): Promise<Ac
   });
   if (error) return { error: error.message };
 
-  // 이메일 인증(Confirm email)이 켜져 있으면 세션이 발급되지 않는다.
-  // 이 경우 자동 로그인이 불가하므로 온보딩으로 보내지 말고 안내를 띄운다.
+  // 이메일 인증(Confirm email)이 켜져 있으면 세션이 없다 → 온보딩으로 보내면 /login으로 튕긴다.
+  // 이 경우 인증 메일 안내를 보여주고 멈춘다.
   // (자동 로그인을 원하면 Supabase Auth 설정에서 "Confirm email"을 끈다.)
   if (!data.session) {
-    return {
-      ok: true,
-      notice:
-        "가입 확인 메일을 보냈어요. 메일의 링크를 클릭해 인증을 완료한 뒤 로그인해주세요.",
-    };
+    return { ok: true, notice: "가입이 접수되었습니다. 메일로 받은 인증 링크를 클릭한 뒤 로그인해주세요." };
   }
 
   redirect("/onboarding");
 }
 
 export async function signIn(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const supabase = await createClient();
-  if (!supabase) return { error: "서버에 Supabase가 설정되지 않았습니다(.env.local 확인)." };
-
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
 
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return { error: "이메일 또는 비밀번호가 올바르지 않습니다." };
+  if (!email || !password) return { error: "이메일과 비밀번호를 입력해주세요." };
 
-  // 역할별 첫 화면 분기
+  const supabase = await createClient();
+  if (!supabase) {
+    // Mock 로그인
+    const cookieStore = await cookies();
+    const registeredVal = cookieStore.get("mock_registered_users")?.value;
+    let registeredList: any[] = [];
+    if (registeredVal) {
+      try {
+        registeredList = JSON.parse(registeredVal);
+      } catch {}
+    }
+
+    const user = registeredList.find((u) => u.email === email);
+    if (!user) {
+      return { error: "이메일 또는 비밀번호가 올바르지 않습니다." };
+    }
+
+    cookieStore.set("mock_user_session", JSON.stringify(user), MOCK_COOKIE);
+    
+    // 역할별 첫 화면 분기
+    redirect(user.role === "company" ? "/biz" : user.role === "admin" ? "/admin" : "/companies");
+  }
+
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) {
+    // 이메일 인증 미완료를 비밀번호 오류로 오인하지 않도록 구분 안내
+    if (error.code === "email_not_confirmed" || /not confirmed/i.test(error.message)) {
+      return { error: "이메일 인증이 완료되지 않았습니다. 가입 시 받은 인증 메일의 링크를 클릭한 뒤 다시 로그인해주세요." };
+    }
+    return { error: "이메일 또는 비밀번호가 올바르지 않습니다." };
+  }
+
+  // 역할별 첫 화면 분기 (프로필 행이 없으면 가입 시 저장한 메타데이터 role로 폴백)
   const { data: prof } = await supabase
     .from("profiles")
     .select("role")
     .eq("id", data.user.id)
-    .single();
-  const role = (prof as { role: Role } | null)?.role ?? "student";
+    .maybeSingle();
+  const role =
+    (prof as { role: Role } | null)?.role ??
+    ((data.user.user_metadata?.role as Role) ?? "student");
   redirect(role === "company" ? "/biz" : role === "admin" ? "/admin" : "/companies");
 }
 
 export async function signOut() {
   const supabase = await createClient();
-  if (supabase) await supabase.auth.signOut();
-  redirect("/");
+  if (!supabase) {
+    const cookieStore = await cookies();
+    cookieStore.delete("mock_user_session");
+    redirect("/");
+  } else {
+    await supabase.auth.signOut();
+    redirect("/");
+  }
 }
 
 // ─────────────────────────────────────────────
 // 온보딩 — 프로필 저장
 // ─────────────────────────────────────────────
 export async function saveStudentProfile(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  const supabase = await createClient();
-  if (!supabase) return { error: "Supabase 미설정." };
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) return { error: "로그인이 필요합니다." };
-
   const skills = formData.getAll("skills").map(String);
   const desiredJobs = formData.getAll("desiredJobs").map(String);
+
+  const supabase = await createClient();
+  if (!supabase) {
+    const cookieStore = await cookies();
+    const sessionVal = cookieStore.get("mock_user_session")?.value;
+    if (!sessionVal) return { error: "로그인이 필요합니다." };
+    const authUser = JSON.parse(sessionVal);
+
+    const profile = {
+      userId: authUser.id,
+      name: authUser.name,
+      dept: String(formData.get("dept") ?? ""),
+      gradYear: Number(formData.get("gradYear")) || null,
+      region: String(formData.get("region") ?? ""),
+      skills,
+      desiredJobs,
+      intro: String(formData.get("intro") ?? ""),
+      updatedAt: new Date().toISOString(),
+    };
+
+    cookieStore.set(`mock_student_profile_${authUser.id}`, JSON.stringify(profile), MOCK_COOKIE);
+    redirect("/companies");
+  }
+
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return { error: "로그인이 필요합니다." };
 
   const { error } = await supabase.from("student_profiles").upsert({
     user_id: auth.user.id,
@@ -102,7 +200,45 @@ export async function saveStudentProfile(_prev: ActionState, formData: FormData)
 
 export async function saveCompanyProfile(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = await createClient();
-  if (!supabase) return { error: "Supabase 미설정." };
+  if (!supabase) {
+    const cookieStore = await cookies();
+    const sessionVal = cookieStore.get("mock_user_session")?.value;
+    if (!sessionVal) return { error: "로그인이 필요합니다." };
+    const authUser = JSON.parse(sessionVal);
+
+    const phone = String(formData.get("phone") ?? "");
+    if (phone) {
+      authUser.phone = phone;
+      cookieStore.set("mock_user_session", JSON.stringify(authUser), MOCK_COOKIE);
+      
+      // Update registry
+      const registeredVal = cookieStore.get("mock_registered_users")?.value;
+      if (registeredVal) {
+        try {
+          const registeredList = JSON.parse(registeredVal);
+          const idx = registeredList.findIndex((u: any) => u.id === authUser.id);
+          if (idx !== -1) {
+            registeredList[idx].phone = phone;
+            cookieStore.set("mock_registered_users", JSON.stringify(registeredList), MOCK_COOKIE);
+          }
+        } catch {}
+      }
+    }
+
+    const payload = {
+      id: "mock-company-id-" + authUser.id,
+      owner_id: authUser.id,
+      name: String(formData.get("name") ?? ""),
+      industry: String(formData.get("industry") ?? ""),
+      region: String(formData.get("region") ?? ""),
+      intro: String(formData.get("intro") ?? ""),
+      perks: String(formData.get("perks") ?? ""),
+    };
+
+    cookieStore.set(`mock_company_profile_${authUser.id}`, JSON.stringify(payload), MOCK_COOKIE);
+    redirect("/biz");
+  }
+
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return { error: "로그인이 필요합니다." };
 

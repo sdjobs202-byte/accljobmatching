@@ -5,10 +5,10 @@ import { isSupabaseEnabled } from "@/lib/supabase/admin";
 import { signOut } from "@/lib/actions";
 
 export default async function Header() {
-  const enabled = isSupabaseEnabled();
-  // Supabase 미설정(로컬 데모)일 때는 모든 메뉴 노출, 설정 시 로그인·역할 기반 노출
-  const demo = !enabled;
-  const profile = enabled ? await getSessionProfile() : null;
+  // Supabase 미설정(로컬 데모)일 때는 모든 메뉴 노출, 설정 시 역할 기반 노출.
+  // 로그인 상태는 두 모드 모두 getSessionProfile로 판별(목업 모드도 쿠키 세션 반영).
+  const demo = !isSupabaseEnabled();
+  const profile = await getSessionProfile();
   const role = profile?.role;
   const loggedIn = !!profile;
 
