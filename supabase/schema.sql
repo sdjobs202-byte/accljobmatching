@@ -127,14 +127,24 @@ alter table applications enable row level security;
 alter table match_scores enable row level security;
 alter table notifications enable row level security;
 
-create or replace function is_admin() returns boolean language sql stable as $$
+-- security definer + search_path 고정: 정책 안에서 profiles 재조회 시 RLS 재귀 방지(필수)
+create or replace function is_admin() returns boolean
+  language sql stable security definer set search_path = public as $$
   select exists (select 1 from profiles where id = auth.uid() and role = 'admin');
 $$;
 
--- 프로필: 본인 조회/수정, 관리자 전체
+-- 프로필: 본인 조회/수정, 관리자 전체, 기업은 자기 공고 지원자 읽기
 create policy "own profile read"  on profiles for select using (id = auth.uid() or is_admin());
 create policy "own profile write" on profiles for update using (id = auth.uid());
 create policy "insert own profile" on profiles for insert with check (id = auth.uid());
+create policy "company reads applicant profiles" on profiles for select using (
+  exists (
+    select 1 from applications a
+    join jobs j      on j.id = a.job_id
+    join companies c on c.id = j.company_id
+    where a.student_id = profiles.id and c.owner_id = auth.uid()
+  )
+);
 
 -- 학생 프로필: 본인 + (공개) 기업/관리자 읽기
 create policy "student self"  on student_profiles for all using (user_id = auth.uid()) with check (user_id = auth.uid());
@@ -170,10 +180,12 @@ create policy "notif own" on notifications for select using (user_id = auth.uid(
 -- ─────────────────────────────────────────────
 -- 6. 가입 시 프로필 자동 생성 트리거
 -- ─────────────────────────────────────────────
-create or replace function handle_new_user() returns trigger language plpgsql security definer as $$
+-- search_path 고정 + 타입 스키마 명시: 없으면 가입 시 "Database error saving new user"
+create or replace function handle_new_user() returns trigger
+  language plpgsql security definer set search_path = public as $$
 begin
   insert into public.profiles (id, role, name)
-  values (new.id, coalesce((new.raw_user_meta_data->>'role')::user_role, 'student'),
+  values (new.id, coalesce((new.raw_user_meta_data->>'role')::public.user_role, 'student'),
           coalesce(new.raw_user_meta_data->>'name', ''));
   return new;
 end; $$;

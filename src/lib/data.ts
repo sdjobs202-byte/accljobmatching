@@ -296,13 +296,27 @@ export async function getApplicationDetail(appId: string): Promise<ApplicationDe
   const r = data as unknown as Row;
   const job = await getJobById(r.job_id);
   if (!job) return null;
+
+  // 이력서: 비공개 버킷 경로 → 권한자(여기까지 RLS 통과한 기업/관리자)에게만 서명 URL 발급.
+  // 레거시(과거 공개 URL "http…")는 그대로 사용.
+  let resumeUrl: string | null = r.resume_url;
+  if (resumeUrl && !resumeUrl.startsWith("http")) {
+    const admin = createAdminClient();
+    if (admin) {
+      const { data: signed } = await admin.storage
+        .from("resumes")
+        .createSignedUrl(resumeUrl, 60 * 10); // 10분 유효
+      resumeUrl = signed?.signedUrl ?? null;
+    }
+  }
+
   return {
     applicationId: r.id,
     status: r.status,
     student: toStudentProfile(r.student_id, r.student),
     job,
     coverLetter: r.cover_letter ?? "",
-    resumeUrl: r.resume_url,
+    resumeUrl,
     portfolioUrl: r.portfolio_url,
     submittedAt: r.created_at?.slice(0, 10) ?? "",
   };

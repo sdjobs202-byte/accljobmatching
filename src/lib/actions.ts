@@ -7,8 +7,8 @@ import { createAdminClient } from "./supabase/admin";
 import { notify } from "./notify";
 import type { Role, EmploymentType, AppStatus } from "./types";
 
-/** 액션 결과 — 폼에서 에러 메시지 표시용 */
-export type ActionState = { error?: string; ok?: boolean };
+/** 액션 결과 — 폼에서 에러/안내 메시지 표시용 */
+export type ActionState = { error?: string; notice?: string; ok?: boolean };
 
 // ─────────────────────────────────────────────
 // 인증
@@ -26,12 +26,23 @@ export async function signUp(_prev: ActionState, formData: FormData): Promise<Ac
   if (password.length < 6) return { error: "비밀번호는 6자 이상이어야 합니다." };
 
   // 가입 — role/name은 user_metadata로 전달(handle_new_user 트리거가 profiles 생성)
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: { data: { role, name } },
   });
   if (error) return { error: error.message };
+
+  // 이메일 인증(Confirm email)이 켜져 있으면 세션이 발급되지 않는다.
+  // 이 경우 자동 로그인이 불가하므로 온보딩으로 보내지 말고 안내를 띄운다.
+  // (자동 로그인을 원하면 Supabase Auth 설정에서 "Confirm email"을 끈다.)
+  if (!data.session) {
+    return {
+      ok: true,
+      notice:
+        "가입 확인 메일을 보냈어요. 메일의 링크를 클릭해 인증을 완료한 뒤 로그인해주세요.",
+    };
+  }
 
   redirect("/onboarding");
 }
@@ -167,8 +178,9 @@ export async function submitApplication(_prev: ActionState, formData: FormData):
   const jobId = String(formData.get("jobId") ?? "");
   if (!jobId) return { error: "공고 정보가 없습니다." };
 
-  // 이력서 파일 업로드(Storage: resumes 버킷)
-  let resumeUrl: string | null = null;
+  // 이력서 파일 업로드(Storage: resumes 비공개 버킷)
+  // 공개 URL 대신 "경로"만 저장한다 → 조회 시 권한자에게 서명 URL을 발급(PII 보호)
+  let resumePath: string | null = null;
   const file = formData.get("resume");
   if (file instanceof File && file.size > 0) {
     const path = `${auth.user.id}/${Date.now()}_${file.name}`;
@@ -176,16 +188,13 @@ export async function submitApplication(_prev: ActionState, formData: FormData):
       cacheControl: "3600",
       upsert: false,
     });
-    if (!upErr) {
-      const { data: pub } = supabase.storage.from("resumes").getPublicUrl(path);
-      resumeUrl = pub.publicUrl;
-    }
+    if (!upErr) resumePath = path;
   }
 
   const { error } = await supabase.from("applications").insert({
     job_id: jobId,
     student_id: auth.user.id,
-    resume_url: resumeUrl,
+    resume_url: resumePath,
     cover_letter: String(formData.get("coverLetter") ?? ""),
     portfolio_url: String(formData.get("portfolioUrl") ?? "") || null,
     status: "submitted",
