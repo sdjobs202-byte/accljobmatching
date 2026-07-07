@@ -199,6 +199,7 @@ export async function saveStudentProfile(_prev: ActionState, formData: FormData)
 }
 
 export async function saveCompanyProfile(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const hashtags = formData.getAll("hashtags").map(String).filter(Boolean);
   const supabase = await createClient();
   if (!supabase) {
     const cookieStore = await cookies();
@@ -233,6 +234,7 @@ export async function saveCompanyProfile(_prev: ActionState, formData: FormData)
       region: String(formData.get("region") ?? ""),
       intro: String(formData.get("intro") ?? ""),
       perks: String(formData.get("perks") ?? ""),
+      hashtags,
     };
 
     cookieStore.set(`mock_company_profile_${authUser.id}`, JSON.stringify(payload), MOCK_COOKIE);
@@ -262,12 +264,59 @@ export async function saveCompanyProfile(_prev: ActionState, formData: FormData)
     perks: String(formData.get("perks") ?? ""),
   };
 
-  const { error } = existing
-    ? await supabase.from("companies").update(payload).eq("id", (existing as { id: string }).id)
-    : await supabase.from("companies").insert(payload);
-  if (error) return { error: error.message };
+  let companyId = (existing as { id: string } | null)?.id;
+  if (existing) {
+    const { error } = await supabase.from("companies").update(payload).eq("id", companyId!);
+    if (error) return { error: error.message };
+  } else {
+    const { data: inserted, error } = await supabase
+      .from("companies")
+      .insert(payload)
+      .select("id")
+      .single();
+    if (error) return { error: error.message };
+    companyId = (inserted as { id: string } | null)?.id;
+  }
+
+  // 해시태그는 best-effort — hashtags 컬럼이 없어도 회사 저장은 막지 않는다.
+  if (companyId && hashtags.length) {
+    await supabase.from("companies").update({ hashtags }).eq("id", companyId);
+  }
 
   redirect("/biz");
+}
+
+// ─────────────────────────────────────────────
+// 중간매칭 — 선택 키워드 저장
+// ─────────────────────────────────────────────
+export async function saveMatchKeywords(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const keywords = formData.getAll("keywords").map(String).filter(Boolean);
+
+  const supabase = await createClient();
+  if (!supabase) {
+    const cookieStore = await cookies();
+    const sessionVal = cookieStore.get("mock_user_session")?.value;
+    if (!sessionVal) return { error: "로그인 후 저장할 수 있어요." };
+    try {
+      const authUser = JSON.parse(sessionVal);
+      cookieStore.set(`mock_match_keywords_${authUser.id}`, JSON.stringify(keywords), MOCK_COOKIE);
+    } catch {
+      return { error: "저장에 실패했어요. 다시 시도해주세요." };
+    }
+    revalidatePath("/companies");
+    return { ok: true };
+  }
+
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return { error: "로그인 후 저장할 수 있어요." };
+  // keywords 컬럼이 없을 수 있어 best-effort — 실패해도 사용자 흐름은 막지 않는다.
+  const { error } = await supabase
+    .from("student_profiles")
+    .update({ keywords })
+    .eq("user_id", auth.user.id);
+  if (error) return { ok: true, notice: "키워드는 이번 세션에만 반영됩니다(컬럼 미설정)." };
+  revalidatePath("/companies");
+  return { ok: true };
 }
 
 // ─────────────────────────────────────────────

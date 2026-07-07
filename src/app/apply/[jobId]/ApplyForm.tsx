@@ -1,15 +1,39 @@
 "use client";
+import { useState } from "react";
 import { useActionState } from "react";
 import { submitApplication, type ActionState } from "@/lib/actions";
 
 export default function ApplyForm({ jobId }: { jobId: string }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(submitApplication, {});
+  const [fileName, setFileName] = useState<string | null>(null);
+
   return (
     <form action={formAction} className="space-y-5">
       <input type="hidden" name="jobId" value={jobId} />
       <div>
-        <label className="text-sm font-semibold">이력서 (PDF)</label>
-        <input name="resume" type="file" accept=".pdf" className="mt-2 block w-full text-sm" />
+        <label className="text-sm font-semibold block mb-2">이력서 (PDF)</label>
+        {/* 눈에 확 띄는 첨부 영역 — 카드 전체가 클릭됨 */}
+        <label className="group flex items-center gap-3 rounded-2xl border-2 border-dashed border-indigo/40 bg-indigo-soft/40 px-4 py-4 cursor-pointer hover:border-indigo hover:bg-indigo-soft/70 transition-colors">
+          <span className="grid place-items-center w-11 h-11 rounded-xl bg-indigo text-white text-xl shrink-0">📎</span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-bold text-ink">
+              {fileName ? "다른 파일로 바꾸기" : "이력서 파일 첨부하기"}
+            </span>
+            <span className="block text-xs text-muted truncate">
+              {fileName ? `✓ ${fileName}` : "PDF 파일을 눌러서 올려주세요"}
+            </span>
+          </span>
+          <span className="rounded-full bg-indigo text-white px-5 py-2.5 text-sm font-semibold shrink-0 group-hover:bg-indigo/90 transition-colors">
+            파일 선택
+          </span>
+          <input
+            name="resume"
+            type="file"
+            accept=".pdf"
+            className="hidden"
+            onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)}
+          />
+        </label>
       </div>
       <div>
         <label className="text-sm font-semibold">자기소개서</label>

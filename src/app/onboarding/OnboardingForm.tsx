@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useActionState } from "react";
 import { saveStudentProfile, saveCompanyProfile, type ActionState } from "@/lib/actions";
+import KeywordPicker from "@/components/KeywordPicker";
 
 const SKILL_OPTIONS = [
   "CNC", "캐드", "측정", "PLC", "전기제어", "협동로봇",
@@ -10,7 +11,11 @@ const SKILL_OPTIONS = [
   "3D프린팅", "용접", "CAM",
 ];
 const JOB_OPTIONS = ["기계설계", "자동화", "품질관리", "데이터", "스마트팩토리", "전기제어"];
-const INDUSTRY_OPTIONS = ["기계/정밀가공", "로봇/자동화", "이차전지", "스마트팩토리", "전기/전자", "IT/SW"];
+const INDUSTRY_OPTIONS = [
+  "IT/SW", "스타트업", "금융/핀테크", "이커머스", "게임", "미디어/콘텐츠",
+  "마케팅/광고", "교육", "의료/바이오", "유통/물류", "공공기관",
+  "기계/정밀가공", "로봇/자동화", "이차전지", "스마트팩토리", "전기/전자", "건설/엔지니어링",
+];
 const REGIONS = ["성남", "판교", "용인", "수원", "서울", "기타"];
 const GRAD_YEARS = ["2025", "2026", "2027"];
 
@@ -169,6 +174,14 @@ export default function OnboardingForm({ role, name, phone, initialData }: Onboa
               placeholder="강소기업으로서의 강점, 주요 사업 내용을 자유롭게 적어주세요"
               className="w-full rounded-xl border border-line px-4 py-3 text-sm focus:outline-none focus:border-indigo resize-none"
             />
+          </div>
+
+          <div>
+            <label className="text-sm font-semibold block mb-1.5">회사 키워드 해시태그</label>
+            <p className="text-xs text-muted mb-3">
+              우리 회사를 나타내는 키워드를 골라주세요. 학생의 키워드와 겹칠수록 매칭 상위에 노출됩니다.
+            </p>
+            <KeywordPicker name="hashtags" initialSelected={initialData?.hashtags || []} compact />
           </div>
 
           <div>

@@ -37,6 +37,7 @@ type CompanyRow = {
   logo_url: string | null;
   intro: string | null;
   perks: string | null;
+  hashtags?: string[] | null;
 };
 
 const mapJob = (r: JobRow): Job => ({
@@ -58,6 +59,7 @@ const mapCompany = (r: CompanyRow): Company => ({
   logoUrl: r.logo_url ?? undefined,
   intro: r.intro ?? "",
   perks: r.perks ?? "",
+  hashtags: r.hashtags ?? undefined,
 });
 
 // ── 공고 ────────────────────────────────────────────
@@ -201,6 +203,33 @@ export async function getMyStudentProfile(): Promise<StudentProfile | null> {
     desiredJobs: r.desired_jobs ?? [],
     intro: r.intro ?? "",
   };
+}
+
+/** 현재 사용자가 저장한 중간매칭 키워드. 없으면 빈 배열. */
+export async function getMyMatchKeywords(): Promise<string[]> {
+  const supabase = await createClient();
+  if (!supabase) {
+    const cookieStore = await cookies();
+    const sessionVal = cookieStore.get("mock_user_session")?.value;
+    if (!sessionVal) return [];
+    try {
+      const authUser = JSON.parse(sessionVal);
+      const val = cookieStore.get(`mock_match_keywords_${authUser.id}`)?.value;
+      return val ? (JSON.parse(val) as string[]) : [];
+    } catch {
+      return [];
+    }
+  }
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return [];
+  // keywords 컬럼이 아직 없을 수 있으므로 실패해도 조용히 빈 배열.
+  const { data, error } = await supabase
+    .from("student_profiles")
+    .select("keywords")
+    .eq("user_id", auth.user.id)
+    .maybeSingle();
+  if (error || !data) return [];
+  return ((data as { keywords?: string[] | null }).keywords ?? []) as string[];
 }
 
 // ── 지원 현황 ────────────────────────────────────────
