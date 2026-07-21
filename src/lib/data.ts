@@ -1,14 +1,10 @@
 import { createClient } from "./supabase/server";
-import {
-  MOCK_COMPANIES,
-  MOCK_JOBS,
-  MOCK_STUDENT,
-  companyById as mockCompanyById,
-} from "./mock";
+import { MOCK_STUDENTS } from "./mock";
+import { mockCompanies, mockJobs, readDeleted } from "./mockStore";
 import type { Company, Job, StudentProfile, EmploymentType, AppStatus, Role } from "./types";
 import { matchOne } from "./matching";
 import { getSessionProfile } from "./auth";
-import { createAdminClient } from "./supabase/admin";
+import { createAdminClient, isSupabaseEnabled } from "./supabase/admin";
 import { cookies } from "next/headers";
 
 /**
@@ -65,19 +61,19 @@ const mapCompany = (r: CompanyRow): Company => ({
 // ── 공고 ────────────────────────────────────────────
 export async function getOpenJobs(): Promise<Job[]> {
   const supabase = await createClient();
-  if (!supabase) return MOCK_JOBS;
+  if (!supabase) return mockJobs();
   const { data, error } = await supabase
     .from("jobs")
     .select("id, company_id, title, job_category, employment_type, region, required_skills, description")
     .eq("status", "open")
     .order("created_at", { ascending: false });
-  if (error || !data) return MOCK_JOBS;
+  if (error || !data) return mockJobs();
   return (data as JobRow[]).map(mapJob);
 }
 
 export async function getJobById(id: string): Promise<Job | null> {
   const supabase = await createClient();
-  if (!supabase) return MOCK_JOBS.find((j) => j.id === id) ?? null;
+  if (!supabase) return (await mockJobs()).find((j) => j.id === id) ?? null;
   const { data } = await supabase
     .from("jobs")
     .select("id, company_id, title, job_category, employment_type, region, required_skills, description")
@@ -88,7 +84,7 @@ export async function getJobById(id: string): Promise<Job | null> {
 
 export async function getJobsByCompany(companyId: string): Promise<Job[]> {
   const supabase = await createClient();
-  if (!supabase) return MOCK_JOBS.filter((j) => j.companyId === companyId);
+  if (!supabase) return (await mockJobs()).filter((j) => j.companyId === companyId);
   const { data } = await supabase
     .from("jobs")
     .select("id, company_id, title, job_category, employment_type, region, required_skills, description")
@@ -100,17 +96,17 @@ export async function getJobsByCompany(companyId: string): Promise<Job[]> {
 // ── 기업 ────────────────────────────────────────────
 export async function getCompanies(): Promise<Company[]> {
   const supabase = await createClient();
-  if (!supabase) return MOCK_COMPANIES;
+  if (!supabase) return mockCompanies();
   const { data } = await supabase
     .from("companies")
     .select("id, name, industry, region, logo_url, intro, perks");
-  if (!data) return MOCK_COMPANIES;
+  if (!data) return mockCompanies();
   return (data as CompanyRow[]).map(mapCompany);
 }
 
 export async function getCompanyById(id: string): Promise<Company | null> {
   const supabase = await createClient();
-  if (!supabase) return mockCompanyById(id) ?? null;
+  if (!supabase) return (await mockCompanies()).find((c) => c.id === id) ?? null;
   const { data } = await supabase
     .from("companies")
     .select("id, name, industry, region, logo_url, intro, perks")
@@ -399,7 +395,19 @@ export interface BizDashboard {
 export async function getBizDashboard(): Promise<BizDashboard> {
   const company = await getMyCompany();
   const supabase = await createClient();
-  if (!supabase || !company) {
+  // 데모 모드: 목업 공고에서 내 회사 것만 보여준다(지원자 데이터는 없음).
+  if (!supabase) {
+    if (!company) return { company: null, jobs: [], totalApplicants: 0, confirmedCount: 0, recent: [] };
+    const myJobs = (await mockJobs()).filter((j) => j.companyId === company.id);
+    return {
+      company,
+      jobs: myJobs.map((j) => ({ ...j, applicantCount: 0 })),
+      totalApplicants: 0,
+      confirmedCount: 0,
+      recent: [],
+    };
+  }
+  if (!company) {
     return { company, jobs: [], totalApplicants: 0, confirmedCount: 0, recent: [] };
   }
   const jobs = await getJobsByCompany(company.id);
@@ -442,6 +450,47 @@ export async function getBizDashboard(): Promise<BizDashboard> {
 // ─────────────────────────────────────────────
 // 관리자(admin) 화면 데이터
 // ─────────────────────────────────────────────
+
+// Supabase 미설정(데모) 시 관리자 화면도 목업으로 채운다.
+// 시드 + 관리자/기업이 추가한 항목(mockStore) − 삭제 표시(mock_admin_deleted).
+const MOCK_JOIN_DATE = "2026-07-01";
+
+/** 삭제 표시를 반영한 목업 학생/기업/공고(시드+추가 병합). */
+async function mockAdminData(): Promise<{ students: StudentProfile[]; companies: Company[]; jobs: Job[] }> {
+  const deleted = await readDeleted();
+  const students = MOCK_STUDENTS.filter((s) => !deleted.has(`student:${s.userId}`));
+  const [companies, jobs] = await Promise.all([mockCompanies(), mockJobs()]);
+  return { students, companies, jobs };
+}
+
+/** 데모 매칭: 각 학생을 가장 잘 맞는 공고에 지원시킨 형태로 생성(결정론적). */
+function buildMockMatches(students: StudentProfile[], jobs: Job[], companies: Company[]): AdminMatch[] {
+  if (!jobs.length) return [];
+  const nameById = new Map(companies.map((c) => [c.id, c.name] as const));
+  const STATUS_CYCLE: AppStatus[] = ["interview_confirmed", "reviewing", "submitted", "hired", "rejected"];
+  return students.map((s, i) => {
+    let best = jobs[0];
+    let bestScore = matchOne(s, jobs[0]).finalScore;
+    for (const job of jobs) {
+      const sc = matchOne(s, job).finalScore;
+      if (sc > bestScore) {
+        best = job;
+        bestScore = sc;
+      }
+    }
+    return {
+      applicationId: `mock-app-${s.userId}`,
+      studentName: s.name,
+      jobTitle: best.title,
+      companyName: nameById.get(best.companyId) ?? "",
+      companyId: best.companyId,
+      jobId: best.id,
+      status: STATUS_CYCLE[i % STATUS_CYCLE.length],
+      finalScore: bestScore,
+    };
+  });
+}
+
 export interface AdminStats {
   students: number;
   companies: number;
@@ -478,6 +527,13 @@ export async function getAdminStats(): Promise<AdminStats> {
     students: 0, companies: 0, jobs: 0, applications: 0,
     funnel: { submitted: 0, reviewing: 0, interview_confirmed: 0, rejected: 0, hired: 0 },
   };
+  if (!isSupabaseEnabled()) {
+    const { students, companies, jobs } = await mockAdminData();
+    const matches = buildMockMatches(students, jobs, companies);
+    const funnel = { ...empty.funnel };
+    matches.forEach((m) => { funnel[m.status] += 1; });
+    return { students: students.length, companies: companies.length, jobs: jobs.length, applications: matches.length, funnel };
+  }
   if (!db) return empty;
 
   const [students, companies, jobs, applications] = await Promise.all([
@@ -499,6 +555,13 @@ export interface AdminUser {
 }
 
 export async function getAdminUsers(): Promise<AdminUser[]> {
+  if (!isSupabaseEnabled()) {
+    const { students, companies } = await mockAdminData();
+    return [
+      ...students.map((s): AdminUser => ({ id: s.userId, name: s.name, role: "student", status: "active", createdAt: MOCK_JOIN_DATE })),
+      ...companies.map((c): AdminUser => ({ id: c.id, name: c.name, role: "company", status: "active", createdAt: MOCK_JOIN_DATE })),
+    ];
+  }
   const db = await adminDb();
   if (!db) return [];
   const { data } = await db
@@ -516,6 +579,17 @@ export interface AdminJob {
 }
 
 export async function getAdminJobs(): Promise<AdminJob[]> {
+  if (!isSupabaseEnabled()) {
+    const { students, companies, jobs } = await mockAdminData();
+    const matches = buildMockMatches(students, jobs, companies);
+    const countByJob = new Map<string, number>();
+    matches.forEach((m) => countByJob.set(m.jobId, (countByJob.get(m.jobId) ?? 0) + 1));
+    const nameById = new Map(companies.map((c) => [c.id, c.name] as const));
+    return jobs.map((j): AdminJob => ({
+      id: j.id, title: j.title, companyName: nameById.get(j.companyId) ?? "",
+      status: "open", applicantCount: countByJob.get(j.id) ?? 0, createdAt: MOCK_JOIN_DATE,
+    }));
+  }
   const db = await adminDb();
   if (!db) return [];
   const { data } = await db
@@ -540,6 +614,10 @@ export interface AdminMatch {
 }
 
 export async function getAdminMatches(): Promise<AdminMatch[]> {
+  if (!isSupabaseEnabled()) {
+    const { students, companies, jobs } = await mockAdminData();
+    return buildMockMatches(students, jobs, companies);
+  }
   const db = await adminDb();
   if (!db) return [];
   const jobs = await getOpenJobs();

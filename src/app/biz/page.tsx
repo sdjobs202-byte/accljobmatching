@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { EMPLOYMENT_LABEL } from "@/lib/types";
 import { getBizDashboard } from "@/lib/data";
+import { deleteBizJob } from "@/lib/actions";
+import { DeleteButton } from "../admin/AdminActions";
 
 export default async function BizDashboard() {
   const { company, jobs, totalApplicants, confirmedCount, recent } = await getBizDashboard();
@@ -73,6 +75,10 @@ export default async function BizDashboard() {
                 >
                   지원자 보기
                 </Link>
+                <DeleteButton
+                  action={deleteBizJob.bind(null, job.id)}
+                  confirmMsg={`공고 "${job.title}" 을(를) 삭제할까요?`}
+                />
               </div>
             </div>
           ))}
