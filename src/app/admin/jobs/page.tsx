@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { getAdminJobs } from "@/lib/data";
+import { deleteAdminJob, resetMockAdminData } from "@/lib/actions";
+import { isSupabaseEnabled } from "@/lib/supabase/admin";
+import { DeleteButton, ResetButton } from "../AdminActions";
 
 const STATUS_LABEL: Record<string, string> = {
   open: "게시중", draft: "임시저장", closed: "마감",
@@ -13,13 +16,30 @@ const STATUS_CLS: Record<string, string> = {
 export default async function AdminJobsPage() {
   const jobs = await getAdminJobs();
   const open = jobs.filter((j) => j.status === "open").length;
+  const demo = !isSupabaseEnabled();
 
   return (
     <div className="px-8 py-10">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-xl font-bold">공고 관리</h1>
-          <p className="text-sm text-muted mt-0.5">전체 {jobs.length}개 · 게시중 {open}개</p>
+          <p className="text-sm text-muted mt-0.5">
+            전체 {jobs.length}개 · 게시중 {open}개
+            {demo && (
+              <span className="ml-2 rounded-full bg-indigo-soft text-indigo text-xs font-semibold px-2 py-0.5">
+                데모(더미) 데이터
+              </span>
+            )}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/admin/jobs/new"
+            className="text-xs rounded-full bg-indigo text-white px-4 py-2 font-semibold hover:bg-indigo/90 transition-colors whitespace-nowrap"
+          >
+            + 공고 등록
+          </Link>
+          {demo && <ResetButton action={resetMockAdminData} />}
         </div>
       </div>
 
@@ -51,12 +71,18 @@ export default async function AdminJobsPage() {
                 </td>
                 <td className="px-5 py-4 text-muted">{job.createdAt}</td>
                 <td className="px-5 py-4">
-                  <Link
-                    href={`/biz/applicants/${job.id}`}
-                    className="text-xs rounded-full border border-line px-3 py-1.5 text-muted hover:text-indigo hover:border-indigo transition-colors"
-                  >
-                    지원자
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/biz/applicants/${job.id}`}
+                      className="text-xs rounded-full border border-line px-3 py-1.5 text-muted hover:text-indigo hover:border-indigo transition-colors"
+                    >
+                      지원자
+                    </Link>
+                    <DeleteButton
+                      action={deleteAdminJob.bind(null, job.id)}
+                      confirmMsg={`공고 "${job.title}" 을(를) 삭제할까요?`}
+                    />
+                  </div>
                 </td>
               </tr>
             ))}
