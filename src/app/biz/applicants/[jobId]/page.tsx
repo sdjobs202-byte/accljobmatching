@@ -7,8 +7,11 @@ export default async function ApplicantsPage({ params }: { params: Promise<{ job
   const { jobId } = await params;
   const job = await getJobById(jobId);
   if (!job) notFound();
-  const company = await getCompanyById(job.companyId);
-  const applicants = await getJobApplicants(jobId);
+  // job 확정 후, 회사 정보와 지원자 목록은 병렬로.
+  const [company, applicants] = await Promise.all([
+    getCompanyById(job.companyId),
+    getJobApplicants(jobId),
+  ]);
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-12">
