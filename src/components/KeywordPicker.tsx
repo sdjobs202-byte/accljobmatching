@@ -18,6 +18,7 @@ import {
 const TONE_ON: Record<string, string> = {
   indigo: "bg-indigo text-white border-indigo",
   sky: "bg-sky-600 text-white border-sky-600",
+  rose: "bg-rose-600 text-white border-rose-600",
   violet: "bg-violet-600 text-white border-violet-600",
   lime: "bg-lime text-ink border-lime",
 };

@@ -9,7 +9,7 @@
  * 순수 함수만 두어 서버/클라이언트 어디서나 재사용한다(외부 의존성 X).
  */
 
-export type KeywordCategory = "industry" | "tech" | "design" | "role";
+export type KeywordCategory = "industry" | "tech" | "ai" | "design" | "role";
 
 export interface CategoryMeta {
   key: KeywordCategory;
@@ -17,12 +17,13 @@ export interface CategoryMeta {
   emoji: string;
   hint: string;
   /** 칩 배경 클래스(선택 시). globals.css 토큰 기반. */
-  tone: "indigo" | "sky" | "violet" | "lime";
+  tone: "indigo" | "sky" | "rose" | "violet" | "lime";
 }
 
 export const CATEGORIES: CategoryMeta[] = [
   { key: "industry", label: "업체 종류", emoji: "🏢", hint: "어떤 종류의 회사를 원하나요", tone: "indigo" },
   { key: "tech", label: "기술 · 백엔드", emoji: "⚙️", hint: "소프트웨어 · 개발 스택", tone: "sky" },
+  { key: "ai", label: "AI · 데이터", emoji: "🤖", hint: "인공지능 · 데이터 사이언스", tone: "rose" },
   { key: "design", label: "UI · UX", emoji: "🎨", hint: "화면 · 디자인 역량", tone: "violet" },
   { key: "role", label: "직무 · 역량", emoji: "🧰", hint: "맡을 일 · 보유 역량", tone: "lime" },
 ];
@@ -34,14 +35,19 @@ export const CATEGORY_BY_KEY: Record<KeywordCategory, CategoryMeta> = Object.fro
 /** 카테고리별 기본 키워드 은행(있는 키워드는 여기서 뜬다). 범용 + 제조계열 포함. */
 export const KEYWORD_BANK: Record<KeywordCategory, string[]> = {
   industry: [
-    "IT/SW", "스타트업", "대기업", "공공기관", "금융/핀테크", "이커머스",
+    "IT/SW", "AI/데이터", "스타트업", "대기업", "공공기관", "금융/핀테크", "이커머스",
     "게임", "미디어/콘텐츠", "마케팅/광고", "교육", "의료/바이오", "유통/물류",
     "건설/엔지니어링", "제조/정밀가공", "로봇/자동화", "스마트팩토리", "이차전지",
   ],
   tech: [
-    "Java", "Spring", "Python", "JavaScript", "TypeScript", "React", "Vue",
-    "Node.js", "SQL", "MySQL", "AWS", "Docker", "Git", "REST API", "HTML/CSS",
-    "Kotlin", "데이터분석", "머신러닝", "PLC", "MES", "ERP", "임베디드",
+    "Java", "JSP", "Spring", "Python", "JavaScript", "TypeScript", "React", "Vue",
+    "Node.js", "Flutter", "C++", "C#", "Flask", "SQL", "NoSQL", "MySQL", "AWS",
+    "클라우드", "Docker", "Git", "REST API", "HTML/CSS", "Kotlin",
+    "PLC", "MES", "ERP", "임베디드", "Unity", "Solidworks",
+  ],
+  ai: [
+    "머신러닝", "딥러닝", "영상인식", "자연어처리",
+    "데이터분석", "데이터마이닝", "텍스트마이닝", "웹크롤링",
   ],
   design: [
     "Figma", "UI디자인", "UX리서치", "반응형웹", "웹퍼블리싱", "프로토타이핑",
@@ -49,9 +55,11 @@ export const KEYWORD_BANK: Record<KeywordCategory, string[]> = {
     "일러스트레이터", "접근성", "인터랙션", "UX라이팅",
   ],
   role: [
-    "백엔드개발", "프론트엔드", "풀스택", "앱개발", "데이터엔지니어", "기획/PM",
+    "웹개발", "백엔드개발", "프론트엔드", "풀스택", "앱개발", "임베디드개발",
+    "데이터엔지니어", "인공지능", "서버관리", "기획/PM",
     "마케팅", "영업", "디자이너", "QA", "인사/HR", "회계/재무", "고객지원",
-    "콘텐츠기획", "데이터분석가", "기계설계", "자동화", "품질관리", "CNC", "캐드",
+    "콘텐츠기획", "데이터분석가", "기계설계", "자동화", "공장자동화", "물류자동화",
+    "품질관리", "CNC", "캐드", "게임기획", "게임운영", "클라이언트개발",
   ],
 };
 
@@ -71,24 +79,43 @@ const SYNONYMS: Record<string, string> = {
   노드: "Node.js", nodejs: "Node.js", "node.js": "Node.js",
   스프링: "Spring", spring: "Spring", 스프링부트: "Spring", springboot: "Spring",
   자바: "Java", 자바스크립트: "JavaScript", javascript: "JavaScript",
+  jsp: "JSP",
   파이썬: "Python", python: "Python",
   타입스크립트: "TypeScript", typescript: "TypeScript",
   뷰: "Vue", vuejs: "Vue",
   코틀린: "Kotlin", kotlin: "Kotlin",
+  플러터: "Flutter", flutter: "Flutter",
+  "c++": "C++", 씨쁠쁠: "C++", 씨플플: "C++",
+  "c#": "C#", 씨샵: "C#", 씨샾: "C#",
+  플라스크: "Flask", flask: "Flask",
   피그마: "Figma", figma: "Figma",
   에이더블유에스: "AWS",
+  클라우드: "클라우드", cloud: "클라우드",
   도커: "Docker", docker: "Docker",
   마이에스큐엘: "MySQL", mysql: "MySQL",
   데이터베이스: "SQL", 디비: "SQL",
+  nosql: "NoSQL", 노에스큐엘: "NoSQL", 비관계형: "NoSQL",
   퍼블리싱: "웹퍼블리싱", 퍼블리셔: "웹퍼블리싱", 웹퍼블리싱: "웹퍼블리싱",
-  머신러닝: "머신러닝", 인공지능: "머신러닝",
+  머신러닝: "머신러닝",
+  딥러닝: "딥러닝", deeplearning: "딥러닝",
+  영상인식: "영상인식", 이미지인식: "영상인식", 컴퓨터비전: "영상인식", 비전인식: "영상인식",
+  자연어처리: "자연어처리", nlp: "자연어처리",
+  웹크롤링: "웹크롤링", 크롤링: "웹크롤링", crawling: "웹크롤링", 웹크롤러: "웹크롤링",
+  데이터마이닝: "데이터마이닝", "데이터 마이닝": "데이터마이닝",
+  텍스트마이닝: "텍스트마이닝", "텍스트 마이닝": "텍스트마이닝",
   임베디드: "임베디드",
+  유니티: "Unity", unity: "Unity",
+  솔리드웍스: "Solidworks", solidworks: "Solidworks", 솔리드웤스: "Solidworks",
   plc: "PLC", mes: "MES", erp: "ERP",
   // ── 직무·역량 ──
+  웹개발: "웹개발", 웹프로그래밍: "웹개발", 웹개발자: "웹개발", 웹퍼블리셔: "웹개발",
   백엔드: "백엔드개발", backend: "백엔드개발", 서버개발: "백엔드개발", 서버개발자: "백엔드개발",
   프론트: "프론트엔드", 프론트엔드: "프론트엔드", frontend: "프론트엔드", 프론트엔드개발: "프론트엔드",
   풀스택: "풀스택", fullstack: "풀스택",
   앱개발: "앱개발", 안드로이드: "앱개발", 아이폰: "앱개발", 모바일개발: "앱개발",
+  임베디드개발: "임베디드개발", 임베디드프로그래밍: "임베디드개발", 펌웨어: "임베디드개발",
+  인공지능: "인공지능", ai개발: "인공지능",
+  서버관리: "서버관리", 인프라: "서버관리", 서버운영: "서버관리", 데브옵스: "서버관리", devops: "서버관리",
   데이터엔지니어: "데이터엔지니어",
   데이터분석: "데이터분석", 데이터분석가: "데이터분석가",
   기획: "기획/PM", 프로덕트매니저: "기획/PM", 프로덕트: "기획/PM", 서비스기획: "기획/PM",
@@ -104,6 +131,9 @@ const SYNONYMS: Record<string, string> = {
   씨엔씨: "CNC", cnc: "CNC",
   캐드: "캐드", cad: "캐드",
   기계설계: "기계설계",
+  공장자동화: "공장자동화", 물류자동화: "물류자동화",
+  게임기획: "게임기획", 게임운영: "게임운영",
+  클라이언트개발: "클라이언트개발", 클라이언트: "클라이언트개발", 클라개발: "클라이언트개발",
   테스트: "QA", 테스터: "QA", 품질검증: "QA",
   // ── 업체 종류 ──
   스타트업: "스타트업", 대기업: "대기업",
@@ -119,6 +149,7 @@ const SYNONYMS: Record<string, string> = {
   건설: "건설/엔지니어링",
   반도체: "제조/정밀가공", 자동차부품: "제조/정밀가공", 정밀가공: "제조/정밀가공", 가공: "제조/정밀가공",
   이차전지: "이차전지", 배터리: "이차전지",
+  "ai/데이터": "AI/데이터", 인공지능회사: "AI/데이터", 데이터회사: "AI/데이터", ai스타트업: "AI/데이터",
   자동화: "자동화", 로봇: "로봇/자동화", 협동로봇: "로봇/자동화",
   스마트팩토리: "스마트팩토리",
   // ── UI·UX ──
@@ -173,22 +204,23 @@ export function categoryOf(keyword: string): KeywordCategory | undefined {
 const INDUSTRY_HASHTAGS: Record<string, string[]> = {
   // IT·서비스
   "IT/SW": ["IT/SW", "React", "Node.js", "TypeScript", "백엔드개발", "프론트엔드"],
+  "AI/데이터": ["AI/데이터", "Python", "머신러닝", "딥러닝", "자연어처리", "영상인식", "데이터분석", "데이터엔지니어"],
   스타트업: ["스타트업", "React", "풀스택", "기획/PM", "마케팅"],
   "금융/핀테크": ["금융/핀테크", "Java", "Spring", "데이터분석", "백엔드개발"],
   이커머스: ["이커머스", "React", "Node.js", "프론트엔드", "데이터분석", "마케팅"],
-  게임: ["게임", "C++", "앱개발", "그래픽디자인", "QA"],
+  게임: ["게임", "C++", "C#", "Unity", "클라이언트개발", "게임기획", "게임운영", "QA"],
   "미디어/콘텐츠": ["미디어/콘텐츠", "콘텐츠기획", "브랜딩", "UX라이팅", "마케팅"],
   "마케팅/광고": ["마케팅/광고", "마케팅", "콘텐츠기획", "데이터분석", "브랜딩"],
   교육: ["교육", "콘텐츠기획", "기획/PM", "프론트엔드"],
-  "의료/바이오": ["의료/바이오", "데이터분석", "품질관리", "Python"],
+  "의료/바이오": ["의료/바이오", "데이터분석", "영상인식", "딥러닝", "품질관리", "Python"],
   "유통/물류": ["유통/물류", "데이터분석", "SQL", "고객지원"],
   공공기관: ["공공기관", "Java", "Spring", "품질관리"],
   // 제조·엔지니어링
-  "기계/정밀가공": ["제조/정밀가공", "CNC", "캐드", "기계설계", "품질관리"],
-  "로봇/자동화": ["로봇/자동화", "PLC", "자동화", "임베디드"],
+  "기계/정밀가공": ["제조/정밀가공", "CNC", "캐드", "Solidworks", "기계설계", "품질관리"],
+  "로봇/자동화": ["로봇/자동화", "PLC", "자동화", "공장자동화", "임베디드", "임베디드개발"],
   이차전지: ["이차전지", "품질관리", "데이터분석", "MES"],
-  스마트팩토리: ["스마트팩토리", "MES", "데이터엔지니어", "SQL"],
-  "전기/전자": ["제조/정밀가공", "임베디드", "품질관리"],
+  스마트팩토리: ["스마트팩토리", "MES", "공장자동화", "물류자동화", "데이터엔지니어", "SQL"],
+  "전기/전자": ["제조/정밀가공", "임베디드", "임베디드개발", "PLC", "품질관리"],
   "건설/엔지니어링": ["건설/엔지니어링", "캐드", "품질관리"],
 };
 
