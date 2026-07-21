@@ -11,8 +11,13 @@ export default async function CompaniesPage({
   searchParams: Promise<{ q?: string; cat?: string; region?: string }>;
 }) {
   const sp = await searchParams;
-  const allJobs = await getOpenJobs();
-  const companies = await getCompanies();
+  // 서로 독립적인 조회는 병렬로(왕복 지연 누적 방지).
+  const [allJobs, companies, studentProfile, myKeywords] = await Promise.all([
+    getOpenJobs(),
+    getCompanies(),
+    getMyStudentProfile(),
+    getMyMatchKeywords(),
+  ]);
   const companyById = (id: string) => companies.find((c) => c.id === id);
 
   let jobs = allJobs;
@@ -21,12 +26,11 @@ export default async function CompaniesPage({
   if (sp.q) jobs = jobs.filter((j) => j.title.includes(sp.q!));
 
   // 로그인 학생 프로필 기준 적합도 정렬 (미로그인 시 데모 학생)
-  const student = (await getMyStudentProfile()) ?? MOCK_STUDENT;
+  const student = studentProfile ?? MOCK_STUDENT;
   const baseRanked = rankJobs(student, jobs);
   const categories = [...new Set(allJobs.map((j) => j.jobCategory))];
 
   // 중간매칭 키워드 부스팅: 저장한 키워드가 있으면 기업 해시태그 겹침으로 재정렬.
-  const myKeywords = await getMyMatchKeywords();
   const ranked = baseRanked
     .map((job) => {
       const co = companyById(job.companyId);

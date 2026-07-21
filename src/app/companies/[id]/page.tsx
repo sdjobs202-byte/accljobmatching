@@ -15,16 +15,20 @@ export default async function CompanyDetail({
 }) {
   const { id } = await params;
   const sp = await searchParams;
-  const company = await getCompanyById(id);
+  // 모두 id(또는 세션)에만 의존 → 병렬 조회.
+  const [company, jobs, studentProfile, myKeywords] = await Promise.all([
+    getCompanyById(id),
+    getJobsByCompany(id),
+    getMyStudentProfile(),
+    getMyMatchKeywords(),
+  ]);
   if (!company) notFound();
 
-  const jobs = await getJobsByCompany(id);
   const active = jobs.find((j) => j.id === sp.job) ?? jobs[0];
-  const student = (await getMyStudentProfile()) ?? MOCK_STUDENT;
+  const student = studentProfile ?? MOCK_STUDENT;
 
   // 기업소개 해시태그 + 내 중간매칭 키워드와의 겹침
   const tags = companyHashtags(company);
-  const myKeywords = await getMyMatchKeywords();
   const tagMatch = myKeywords.length ? scoreHashtagMatch(myKeywords, tags) : null;
   const hitSet = new Set((tagMatch?.hits ?? []).map((h) => h.toLowerCase()));
 

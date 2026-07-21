@@ -17,10 +17,13 @@ export default async function MyPage() {
   if (isSupabaseEnabled() && !(await getSessionUser())) {
     redirect("/login");
   }
-  const student = (await getMyStudentProfile()) ?? MOCK_STUDENT;
-  const apps = await getMyApplications();
-  const jobs = await getOpenJobs();
-  const companies = await getCompanies();
+  const [studentProfile, apps, jobs, companies] = await Promise.all([
+    getMyStudentProfile(),
+    getMyApplications(),
+    getOpenJobs(),
+    getCompanies(),
+  ]);
+  const student = studentProfile ?? MOCK_STUDENT;
   const companyById = (id: string) => companies.find((c) => c.id === id);
   const recommended = rankJobs(student, jobs).slice(0, 3);
 
