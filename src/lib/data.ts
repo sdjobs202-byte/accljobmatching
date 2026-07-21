@@ -236,6 +236,7 @@ export async function getMyMatchKeywords(): Promise<string[]> {
 export interface MyApplication {
   id: string;
   jobId: string;
+  companyId: string;
   status: AppStatus;
   jobTitle: string;
   companyName: string;
@@ -246,24 +247,25 @@ export async function getMyApplications(): Promise<MyApplication[]> {
   const supabase = await createClient();
   if (!supabase) {
     return [
-      { id: "a1", jobId: "j1", status: "interview_confirmed", jobTitle: "CNC 가공 엔지니어", companyName: "한빛정밀" },
-      { id: "a2", jobId: "j3", status: "reviewing", jobTitle: "배터리 품질 분석원", companyName: "그린에너지셀" },
+      { id: "a1", jobId: "j1", companyId: "c1", status: "interview_confirmed", jobTitle: "CNC 가공 엔지니어", companyName: "한빛정밀" },
+      { id: "a2", jobId: "j3", companyId: "c3", status: "reviewing", jobTitle: "배터리 품질 분석원", companyName: "그린에너지셀" },
     ];
   }
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return [];
   const { data } = await supabase
     .from("applications")
-    .select("id, job_id, status, jobs(title, companies(name))")
+    .select("id, job_id, status, jobs(title, company_id, companies(name))")
     .eq("student_id", auth.user.id)
     .order("created_at", { ascending: false });
   type Row = {
     id: string; job_id: string; status: AppStatus;
-    jobs: { title: string; companies: { name: string } | null } | null;
+    jobs: { title: string; company_id: string; companies: { name: string } | null } | null;
   };
   return ((data as unknown as Row[]) ?? []).map((r) => ({
     id: r.id,
     jobId: r.job_id,
+    companyId: r.jobs?.company_id ?? "",
     status: r.status,
     jobTitle: r.jobs?.title ?? "",
     companyName: r.jobs?.companies?.name ?? "",
@@ -533,6 +535,7 @@ export async function getAdminJobs(): Promise<AdminJob[]> {
 
 export interface AdminMatch {
   applicationId: string; studentName: string; jobTitle: string; companyName: string;
+  companyId: string; jobId: string;
   status: AppStatus; finalScore: number;
 }
 
@@ -543,12 +546,12 @@ export async function getAdminMatches(): Promise<AdminMatch[]> {
   const jobMap = new Map(jobs.map((j) => [j.id, j]));
   const { data } = await db
     .from("applications")
-    .select("id, status, job_id, student:profiles!student_id(name, student_profiles(dept, region, skills, desired_jobs, intro)), jobs(title, companies(name))")
+    .select("id, status, job_id, student:profiles!student_id(name, student_profiles(dept, region, skills, desired_jobs, intro)), jobs(title, company_id, companies(name))")
     .order("created_at", { ascending: false });
   type Row = {
     id: string; status: AppStatus; job_id: string;
     student: EmbeddedStudent | null;
-    jobs: { title: string; companies: { name: string } | null } | null;
+    jobs: { title: string; company_id: string; companies: { name: string } | null } | null;
   };
   return ((data as unknown as Row[]) ?? []).map((r) => {
     const job = jobMap.get(r.job_id);
@@ -558,6 +561,8 @@ export async function getAdminMatches(): Promise<AdminMatch[]> {
       studentName: r.student?.name ?? "",
       jobTitle: r.jobs?.title ?? "",
       companyName: r.jobs?.companies?.name ?? "",
+      companyId: r.jobs?.company_id ?? "",
+      jobId: r.job_id,
       status: r.status,
       finalScore: score,
     };

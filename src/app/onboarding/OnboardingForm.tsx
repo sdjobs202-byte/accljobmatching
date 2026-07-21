@@ -9,8 +9,12 @@ const SKILL_OPTIONS = [
   "CNC", "캐드", "측정", "PLC", "전기제어", "협동로봇",
   "품질", "데이터분석", "엑셀", "SQL", "설비", "MES",
   "3D프린팅", "용접", "CAM",
+  "파이썬", "자바", "C/C++", "자바스크립트", "리액트", "스프링", "웹개발", "앱개발", "Git"
 ];
-const JOB_OPTIONS = ["기계설계", "자동화", "품질관리", "데이터", "스마트팩토리", "전기제어"];
+const JOB_OPTIONS = [
+  "기계설계", "자동화", "품질관리", "데이터", "스마트팩토리", "전기제어",
+  "웹개발자", "앱개발자", "SW개발자", "임베디드개발", "시스템엔지니어"
+];
 const INDUSTRY_OPTIONS = [
   "IT/SW", "스타트업", "금융/핀테크", "이커머스", "게임", "미디어/콘텐츠",
   "마케팅/광고", "교육", "의료/바이오", "유통/물류", "공공기관",
@@ -29,6 +33,12 @@ interface OnboardingFormProps {
 export default function OnboardingForm({ role, name, phone, initialData }: OnboardingFormProps) {
   const [skills, setSkills] = useState<string[]>(initialData?.skills || []);
   const [jobs, setJobs] = useState<string[]>(initialData?.desiredJobs || []);
+  const [regions, setRegions] = useState<string[]>(() => {
+    if (initialData?.region) {
+      return initialData.region.split(",").map((r: string) => r.trim()).filter(Boolean);
+    }
+    return ["성남"];
+  });
   const [studentState, studentAction, studentPending] = useActionState<ActionState, FormData>(saveStudentProfile, {});
   const [companyState, companyAction, companyPending] = useActionState<ActionState, FormData>(saveCompanyProfile, {});
 
@@ -60,7 +70,7 @@ export default function OnboardingForm({ role, name, phone, initialData }: Onboa
           <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-semibold block mb-1.5">이름 <span className="text-indigo">*</span></label>
-              <input disabled value={name} className="w-full rounded-xl border border-line bg-gray-50 px-4 py-3 text-sm text-gray-500 focus:outline-none" />
+              <input name="name" required defaultValue={initialData?.name || name || ""} className="w-full rounded-xl border border-line px-4 py-3 text-sm focus:outline-none focus:border-indigo" />
             </div>
             <div>
               <label className="text-sm font-semibold block mb-1.5">학과 <span className="text-indigo">*</span></label>
@@ -75,12 +85,28 @@ export default function OnboardingForm({ role, name, phone, initialData }: Onboa
                 {GRAD_YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
               </select>
             </div>
-            <div>
-              <label className="text-sm font-semibold block mb-1.5">거주 지역 / 희망 근무지 <span className="text-indigo">*</span></label>
-              <select name="region" defaultValue={initialData?.region || "성남"} className="w-full rounded-xl border border-line px-4 py-3 text-sm focus:outline-none focus:border-indigo">
-                {REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
-              </select>
+          </div>
+
+          <div>
+            <label className="text-sm font-semibold block mb-2">희망 근무지 <span className="text-indigo">*</span></label>
+            <p className="text-xs text-muted mb-3">여러 지역을 동시에 선택할 수 있습니다.</p>
+            <div className="flex flex-wrap gap-2">
+              {REGIONS.map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => toggle(regions, r, setRegions)}
+                  className={`rounded-full px-3 py-1.5 text-sm border font-medium transition-colors ${
+                    regions.includes(r)
+                      ? "bg-indigo text-white border-indigo"
+                      : "border-line hover:border-indigo"
+                  }`}
+                >
+                  {r}
+                </button>
+              ))}
             </div>
+            <input type="hidden" name="region" value={regions.join(",")} />
           </div>
 
           <div>

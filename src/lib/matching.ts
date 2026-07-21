@@ -26,8 +26,13 @@ export function ruleScore(student: StudentProfile, job: Job, w = DEFAULT_WEIGHTS
   if (job.requiredSkills.length > 0) {
     s += Math.round((overlap / job.requiredSkills.length) * w.wSkills);
   }
-  // 지역
-  if (student.region && job.region && student.region === job.region) s += w.wRegion;
+  // 지역 (다중 지역 선택 지원)
+  if (student.region && job.region) {
+    const studentRegions = student.region.split(",").map((r) => r.trim());
+    if (studentRegions.includes(job.region)) {
+      s += w.wRegion;
+    }
+  }
   // 희망 직무군이 하나라도 걸리면 고용형태 가점
   if (student.desiredJobs.length > 0) s += w.wEmployment;
   return Math.min(100, s);

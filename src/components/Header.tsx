@@ -23,7 +23,9 @@ export default async function Header() {
             <Link href="/match" className="text-indigo font-semibold hover:opacity-80">✨ 키워드매칭</Link>
           )}
           {(demo || role === "student") && (
-            <Link href="/me" className="hover:text-indigo">마이페이지</Link>
+            <Link href="/me" className="hover:text-indigo">
+              {profile?.name ? `${profile.name} 마이페이지` : "마이페이지"}
+            </Link>
           )}
           {(demo || role === "company") && (
             <Link href="/biz" className="hover:text-indigo">기업</Link>

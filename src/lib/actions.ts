@@ -154,6 +154,7 @@ export async function signOut() {
 // 온보딩 — 프로필 저장
 // ─────────────────────────────────────────────
 export async function saveStudentProfile(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const name = String(formData.get("name") ?? "").trim();
   const skills = formData.getAll("skills").map(String);
   const desiredJobs = formData.getAll("desiredJobs").map(String);
 
@@ -164,9 +165,26 @@ export async function saveStudentProfile(_prev: ActionState, formData: FormData)
     if (!sessionVal) return { error: "로그인이 필요합니다." };
     const authUser = JSON.parse(sessionVal);
 
+    if (name) {
+      authUser.name = name;
+      cookieStore.set("mock_user_session", JSON.stringify(authUser), MOCK_COOKIE);
+
+      const registeredVal = cookieStore.get("mock_registered_users")?.value;
+      if (registeredVal) {
+        try {
+          const registeredList = JSON.parse(registeredVal);
+          const idx = registeredList.findIndex((u: any) => u.id === authUser.id);
+          if (idx !== -1) {
+            registeredList[idx].name = name;
+            cookieStore.set("mock_registered_users", JSON.stringify(registeredList), MOCK_COOKIE);
+          }
+        } catch {}
+      }
+    }
+
     const profile = {
       userId: authUser.id,
-      name: authUser.name,
+      name: name || authUser.name,
       dept: String(formData.get("dept") ?? ""),
       gradYear: Number(formData.get("gradYear")) || null,
       region: String(formData.get("region") ?? ""),
@@ -182,6 +200,10 @@ export async function saveStudentProfile(_prev: ActionState, formData: FormData)
 
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return { error: "로그인이 필요합니다." };
+
+  if (name) {
+    await supabase.from("profiles").update({ name }).eq("id", auth.user.id);
+  }
 
   const { error } = await supabase.from("student_profiles").upsert({
     user_id: auth.user.id,

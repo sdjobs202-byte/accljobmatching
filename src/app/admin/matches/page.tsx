@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { STATUS_LABEL, type AppStatus } from "@/lib/types";
 import { getAdminMatches } from "@/lib/data";
 
@@ -67,7 +68,11 @@ export default async function AdminMatchesPage() {
               <tr key={m.applicationId} className="hover:bg-gray-50/60 transition-colors">
                 <td className="px-5 py-4 font-semibold">{m.studentName}</td>
                 <td className="px-5 py-4">{m.jobTitle}</td>
-                <td className="px-5 py-4 text-muted">{m.companyName}</td>
+                <td className="px-5 py-4 text-muted">
+                  <Link href={`/companies/${m.companyId}?job=${m.jobId}`} className="hover:text-indigo hover:underline">
+                    {m.companyName}
+                  </Link>
+                </td>
                 <td className="px-5 py-4">
                   <span className={`badge ${scoreCls(m.finalScore)} font-bold`}>{m.finalScore}</span>
                 </td>

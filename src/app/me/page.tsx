@@ -26,8 +26,17 @@ export default async function MyPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-5 py-12">
-      <h1 className="hail text-3xl">{student.name}님의 여정.</h1>
-      <p className="text-sm text-muted mt-1 mb-10">{student.dept} · {student.region}</p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10 pb-6 border-b border-line">
+        <div>
+          <h1 className="hail text-3xl">{student.name}님의 여정.</h1>
+          <p className="text-sm text-muted mt-1">{student.dept} · {student.region.split(",").join(", ")}</p>
+        </div>
+        <div>
+          <Link href="/onboarding" className="inline-block rounded-full border border-indigo text-indigo px-5 py-2.5 text-sm font-semibold hover:bg-indigo hover:text-white transition-colors">
+            프로필 수정
+          </Link>
+        </div>
+      </div>
 
       <h2 className="font-bold mb-3">지원 현황</h2>
       <div className="space-y-3 mb-12">
@@ -40,7 +49,9 @@ export default async function MyPage() {
           <div key={a.id} className="flex items-center justify-between rounded-xl border border-line p-4">
             <div>
               <div className="font-semibold">{a.jobTitle}</div>
-              <div className="text-sm text-muted">{a.companyName}</div>
+              <Link href={`/companies/${a.companyId}?job=${a.jobId}`} className="text-sm text-muted hover:text-indigo hover:underline">
+                {a.companyName}
+              </Link>
             </div>
             <span className={`badge ${badgeClass[a.status]}`}>{STATUS_LABEL[a.status]}</span>
           </div>
