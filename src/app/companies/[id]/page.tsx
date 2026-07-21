@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { MOCK_STUDENT } from "@/lib/mock";
 import { matchOne } from "@/lib/matching";
 import { EMPLOYMENT_LABEL } from "@/lib/types";
-import { getCompanyById, getJobsByCompany, getMyStudentProfile } from "@/lib/data";
+import { getCompanyById, getJobsByCompany, getMyStudentProfile, getMyMatchKeywords } from "@/lib/data";
+import { companyHashtags, scoreHashtagMatch } from "@/lib/keywords";
 
 export default async function CompanyDetail({
   params,
@@ -21,6 +22,12 @@ export default async function CompanyDetail({
   const active = jobs.find((j) => j.id === sp.job) ?? jobs[0];
   const student = (await getMyStudentProfile()) ?? MOCK_STUDENT;
 
+  // 기업소개 해시태그 + 내 중간매칭 키워드와의 겹침
+  const tags = companyHashtags(company);
+  const myKeywords = await getMyMatchKeywords();
+  const tagMatch = myKeywords.length ? scoreHashtagMatch(myKeywords, tags) : null;
+  const hitSet = new Set((tagMatch?.hits ?? []).map((h) => h.toLowerCase()));
+
   return (
     <div className="mx-auto max-w-4xl px-5 py-12">
       {/* 기업 헤더 */}
@@ -35,6 +42,33 @@ export default async function CompanyDetail({
       </div>
       <p className="mt-4 text-ink/80">{company.intro}</p>
       <p className="mt-2 text-sm text-muted">우대/복지 · {company.perks}</p>
+
+      {/* 기업소개 해시태그 */}
+      {tags.length > 0 && (
+        <div className="mt-5">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xs font-semibold text-muted">회사 키워드</span>
+            {tagMatch && tagMatch.hits.length > 0 && (
+              <span className="badge badge-confirmed">내 키워드 {tagMatch.hits.length}개 일치 · {tagMatch.score}</span>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {tags.map((t) => {
+              const on = hitSet.has(t.toLowerCase());
+              return (
+                <span
+                  key={t}
+                  className={`text-xs rounded-full px-2.5 py-1 font-medium ${
+                    on ? "bg-lime text-ink" : "bg-indigo-soft text-indigo"
+                  }`}
+                >
+                  #{t}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* 공고 탭 */}
       <div className="mt-10 flex gap-2">

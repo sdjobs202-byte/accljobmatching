@@ -37,6 +37,7 @@ type CompanyRow = {
   logo_url: string | null;
   intro: string | null;
   perks: string | null;
+  hashtags?: string[] | null;
 };
 
 const mapJob = (r: JobRow): Job => ({
@@ -58,6 +59,7 @@ const mapCompany = (r: CompanyRow): Company => ({
   logoUrl: r.logo_url ?? undefined,
   intro: r.intro ?? "",
   perks: r.perks ?? "",
+  hashtags: r.hashtags ?? undefined,
 });
 
 // ── 공고 ────────────────────────────────────────────
@@ -203,6 +205,33 @@ export async function getMyStudentProfile(): Promise<StudentProfile | null> {
   };
 }
 
+/** 현재 사용자가 저장한 중간매칭 키워드. 없으면 빈 배열. */
+export async function getMyMatchKeywords(): Promise<string[]> {
+  const supabase = await createClient();
+  if (!supabase) {
+    const cookieStore = await cookies();
+    const sessionVal = cookieStore.get("mock_user_session")?.value;
+    if (!sessionVal) return [];
+    try {
+      const authUser = JSON.parse(sessionVal);
+      const val = cookieStore.get(`mock_match_keywords_${authUser.id}`)?.value;
+      return val ? (JSON.parse(val) as string[]) : [];
+    } catch {
+      return [];
+    }
+  }
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return [];
+  // keywords 컬럼이 아직 없을 수 있으므로 실패해도 조용히 빈 배열.
+  const { data, error } = await supabase
+    .from("student_profiles")
+    .select("keywords")
+    .eq("user_id", auth.user.id)
+    .maybeSingle();
+  if (error || !data) return [];
+  return ((data as { keywords?: string[] | null }).keywords ?? []) as string[];
+}
+
 // ── 지원 현황 ────────────────────────────────────────
 export interface MyApplication {
   id: string;
@@ -332,13 +361,27 @@ export async function getApplicationDetail(appId: string): Promise<ApplicationDe
   const r = data as unknown as Row;
   const job = await getJobById(r.job_id);
   if (!job) return null;
+
+  // 이력서: 비공개 버킷 경로 → 권한자(여기까지 RLS 통과한 기업/관리자)에게만 서명 URL 발급.
+  // 레거시(과거 공개 URL "http…")는 그대로 사용.
+  let resumeUrl: string | null = r.resume_url;
+  if (resumeUrl && !resumeUrl.startsWith("http")) {
+    const admin = createAdminClient();
+    if (admin) {
+      const { data: signed } = await admin.storage
+        .from("resumes")
+        .createSignedUrl(resumeUrl, 60 * 10); // 10분 유효
+      resumeUrl = signed?.signedUrl ?? null;
+    }
+  }
+
   return {
     applicationId: r.id,
     status: r.status,
     student: toStudentProfile(r.student_id, r.student),
     job,
     coverLetter: r.cover_letter ?? "",
-    resumeUrl: r.resume_url,
+    resumeUrl,
     portfolioUrl: r.portfolio_url,
     submittedAt: r.created_at?.slice(0, 10) ?? "",
   };

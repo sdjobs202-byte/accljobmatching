@@ -80,8 +80,9 @@ export async function signUp(_prev: ActionState, formData: FormData): Promise<Ac
 
   // 이메일 인증(Confirm email)이 켜져 있으면 세션이 없다 → 온보딩으로 보내면 /login으로 튕긴다.
   // 이 경우 인증 메일 안내를 보여주고 멈춘다.
+  // (자동 로그인을 원하면 Supabase Auth 설정에서 "Confirm email"을 끈다.)
   if (!data.session) {
-    return { notice: "가입이 접수되었습니다. 메일로 받은 인증 링크를 클릭한 뒤 로그인해주세요." };
+    return { ok: true, notice: "가입이 접수되었습니다. 메일로 받은 인증 링크를 클릭한 뒤 로그인해주세요." };
   }
 
   redirect("/onboarding");
@@ -220,6 +221,7 @@ export async function saveStudentProfile(_prev: ActionState, formData: FormData)
 }
 
 export async function saveCompanyProfile(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const hashtags = formData.getAll("hashtags").map(String).filter(Boolean);
   const supabase = await createClient();
   if (!supabase) {
     const cookieStore = await cookies();
@@ -254,6 +256,7 @@ export async function saveCompanyProfile(_prev: ActionState, formData: FormData)
       region: String(formData.get("region") ?? ""),
       intro: String(formData.get("intro") ?? ""),
       perks: String(formData.get("perks") ?? ""),
+      hashtags,
     };
 
     cookieStore.set(`mock_company_profile_${authUser.id}`, JSON.stringify(payload), MOCK_COOKIE);
@@ -283,12 +286,59 @@ export async function saveCompanyProfile(_prev: ActionState, formData: FormData)
     perks: String(formData.get("perks") ?? ""),
   };
 
-  const { error } = existing
-    ? await supabase.from("companies").update(payload).eq("id", (existing as { id: string }).id)
-    : await supabase.from("companies").insert(payload);
-  if (error) return { error: error.message };
+  let companyId = (existing as { id: string } | null)?.id;
+  if (existing) {
+    const { error } = await supabase.from("companies").update(payload).eq("id", companyId!);
+    if (error) return { error: error.message };
+  } else {
+    const { data: inserted, error } = await supabase
+      .from("companies")
+      .insert(payload)
+      .select("id")
+      .single();
+    if (error) return { error: error.message };
+    companyId = (inserted as { id: string } | null)?.id;
+  }
+
+  // 해시태그는 best-effort — hashtags 컬럼이 없어도 회사 저장은 막지 않는다.
+  if (companyId && hashtags.length) {
+    await supabase.from("companies").update({ hashtags }).eq("id", companyId);
+  }
 
   redirect("/biz");
+}
+
+// ─────────────────────────────────────────────
+// 중간매칭 — 선택 키워드 저장
+// ─────────────────────────────────────────────
+export async function saveMatchKeywords(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const keywords = formData.getAll("keywords").map(String).filter(Boolean);
+
+  const supabase = await createClient();
+  if (!supabase) {
+    const cookieStore = await cookies();
+    const sessionVal = cookieStore.get("mock_user_session")?.value;
+    if (!sessionVal) return { error: "로그인 후 저장할 수 있어요." };
+    try {
+      const authUser = JSON.parse(sessionVal);
+      cookieStore.set(`mock_match_keywords_${authUser.id}`, JSON.stringify(keywords), MOCK_COOKIE);
+    } catch {
+      return { error: "저장에 실패했어요. 다시 시도해주세요." };
+    }
+    revalidatePath("/companies");
+    return { ok: true };
+  }
+
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return { error: "로그인 후 저장할 수 있어요." };
+  // keywords 컬럼이 없을 수 있어 best-effort — 실패해도 사용자 흐름은 막지 않는다.
+  const { error } = await supabase
+    .from("student_profiles")
+    .update({ keywords })
+    .eq("user_id", auth.user.id);
+  if (error) return { ok: true, notice: "키워드는 이번 세션에만 반영됩니다(컬럼 미설정)." };
+  revalidatePath("/companies");
+  return { ok: true };
 }
 
 // ─────────────────────────────────────────────
@@ -335,8 +385,9 @@ export async function submitApplication(_prev: ActionState, formData: FormData):
   const jobId = String(formData.get("jobId") ?? "");
   if (!jobId) return { error: "공고 정보가 없습니다." };
 
-  // 이력서 파일 업로드(Storage: resumes 버킷)
-  let resumeUrl: string | null = null;
+  // 이력서 파일 업로드(Storage: resumes 비공개 버킷)
+  // 공개 URL 대신 "경로"만 저장한다 → 조회 시 권한자에게 서명 URL을 발급(PII 보호)
+  let resumePath: string | null = null;
   const file = formData.get("resume");
   if (file instanceof File && file.size > 0) {
     const path = `${auth.user.id}/${Date.now()}_${file.name}`;
@@ -344,16 +395,13 @@ export async function submitApplication(_prev: ActionState, formData: FormData):
       cacheControl: "3600",
       upsert: false,
     });
-    if (!upErr) {
-      const { data: pub } = supabase.storage.from("resumes").getPublicUrl(path);
-      resumeUrl = pub.publicUrl;
-    }
+    if (!upErr) resumePath = path;
   }
 
   const { error } = await supabase.from("applications").insert({
     job_id: jobId,
     student_id: auth.user.id,
-    resume_url: resumeUrl,
+    resume_url: resumePath,
     cover_letter: String(formData.get("coverLetter") ?? ""),
     portfolio_url: String(formData.get("portfolioUrl") ?? "") || null,
     status: "submitted",

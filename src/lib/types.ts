@@ -25,6 +25,7 @@ export interface Company {
   logoUrl?: string;
   intro: string;
   perks: string;
+  hashtags?: string[];   // 기업소개 해시태그(키워드 매칭용)
 }
 
 export interface Job {
