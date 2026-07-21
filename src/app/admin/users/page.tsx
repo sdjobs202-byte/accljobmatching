@@ -1,5 +1,11 @@
+import Link from "next/link";
 import type { Role } from "@/lib/types";
 import { getAdminUsers } from "@/lib/data";
+import { deleteAdminUser, resetMockAdminData } from "@/lib/actions";
+import { isSupabaseEnabled } from "@/lib/supabase/admin";
+import { DeleteButton, ResetButton } from "../AdminActions";
+
+const ROLE_NOUN: Record<Role, string> = { student: "학생", company: "기업", admin: "관리자" };
 
 const ROLE_LABEL: Record<Role, string> = { student: "학생", company: "기업", admin: "관리자" };
 const ROLE_CLS: Record<Role, string> = {
@@ -21,6 +27,7 @@ export default async function AdminUsersPage() {
   const students = users.filter((u) => u.role === "student");
   const companies = users.filter((u) => u.role === "company");
   const pending = users.filter((u) => u.status === "pending");
+  const demo = !isSupabaseEnabled();
 
   return (
     <div className="px-8 py-10">
@@ -34,7 +41,21 @@ export default async function AdminUsersPage() {
                 승인 대기 {pending.length}건
               </span>
             )}
+            {demo && (
+              <span className="ml-2 rounded-full bg-indigo-soft text-indigo text-xs font-semibold px-2 py-0.5">
+                데모(더미) 데이터
+              </span>
+            )}
           </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/admin/companies/new"
+            className="text-xs rounded-full bg-indigo text-white px-4 py-2 font-semibold hover:bg-indigo/90 transition-colors whitespace-nowrap"
+          >
+            + 기업 등록
+          </Link>
+          {demo && <ResetButton action={resetMockAdminData} />}
         </div>
       </div>
 
@@ -42,17 +63,17 @@ export default async function AdminUsersPage() {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 text-muted text-xs border-b border-line">
             <tr>
-              {["이름", "역할", "상태", "가입일"].map((h) => (
+              {["이름", "역할", "상태", "가입일", "관리"].map((h) => (
                 <th key={h} className="text-left px-5 py-3.5 font-semibold">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
             {users.length === 0 && (
-              <tr><td colSpan={4} className="px-5 py-8 text-center text-muted">가입한 회원이 없습니다.</td></tr>
+              <tr><td colSpan={5} className="px-5 py-8 text-center text-muted">가입한 회원이 없습니다.</td></tr>
             )}
             {users.map((u) => (
-              <tr key={u.id} className="hover:bg-gray-50/60 transition-colors">
+              <tr key={`${u.role}:${u.id}`} className="hover:bg-gray-50/60 transition-colors">
                 <td className="px-5 py-4 font-semibold">{u.name || "(이름 미설정)"}</td>
                 <td className="px-5 py-4">
                   <span className={`badge ${ROLE_CLS[u.role]}`}>{ROLE_LABEL[u.role]}</span>
@@ -63,6 +84,14 @@ export default async function AdminUsersPage() {
                   </span>
                 </td>
                 <td className="px-5 py-4 text-muted">{u.createdAt}</td>
+                <td className="px-5 py-4">
+                  {u.role !== "admin" && (
+                    <DeleteButton
+                      action={deleteAdminUser.bind(null, u.id, u.role)}
+                      confirmMsg={`${ROLE_NOUN[u.role]} 회원 "${u.name || "(이름 미설정)"}" 을(를) 삭제할까요?`}
+                    />
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>

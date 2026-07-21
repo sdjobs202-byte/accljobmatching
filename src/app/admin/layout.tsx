@@ -7,7 +7,9 @@ import { isSupabaseEnabled } from "@/lib/supabase/admin";
 const NAV = [
   { href: "/admin", label: "대시보드", icon: "▦" },
   { href: "/admin/users", label: "회원 관리", icon: "👤" },
+  { href: "/admin/companies/new", label: "기업 등록", icon: "🏢" },
   { href: "/admin/jobs", label: "공고 관리", icon: "📋" },
+  { href: "/admin/jobs/new", label: "공고 등록", icon: "✍️" },
   { href: "/admin/matches", label: "매칭 현황", icon: "⚡" },
 ];
 

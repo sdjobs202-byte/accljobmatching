@@ -3,9 +3,19 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "./supabase/server";
-import { createAdminClient } from "./supabase/admin";
+import { createAdminClient, isSupabaseEnabled } from "./supabase/admin";
+import { getSessionProfile } from "./auth";
+import { getMyCompany } from "./data";
+import {
+  addDeleted,
+  addCompany,
+  addJob,
+  upsertCompany,
+  clearMockStore,
+  rid,
+} from "./mockStore";
 import { notify } from "./notify";
-import type { Role, EmploymentType, AppStatus } from "./types";
+import type { Role, EmploymentType, AppStatus, Company, Job } from "./types";
 
 import { cookies } from "next/headers";
 
@@ -346,7 +356,27 @@ export async function saveMatchKeywords(_prev: ActionState, formData: FormData):
 // ─────────────────────────────────────────────
 export async function createJob(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = await createClient();
-  if (!supabase) return { error: "Supabase 미설정." };
+
+  // 데모 모드: 목업 저장소에 공고를 추가하고 대시보드로.
+  if (!supabase) {
+    const company = await getMyCompany();
+    if (!company) return { error: "먼저 회사 정보를 등록해주세요(/onboarding)." };
+    // 로그인 기업 회사를 전역 목록에도 노출(관리자/매칭 화면에서 보이도록)
+    await upsertCompany(company);
+    await addJob({
+      id: rid("mock-job-"),
+      companyId: company.id,
+      title: String(formData.get("title") ?? ""),
+      jobCategory: String(formData.get("jobCategory") ?? ""),
+      employmentType: String(formData.get("employmentType") ?? "fulltime") as EmploymentType,
+      region: String(formData.get("region") ?? ""),
+      requiredSkills: formData.getAll("skills").map(String),
+      description: String(formData.get("description") ?? ""),
+    });
+    revalidatePath("/biz");
+    redirect("/biz");
+  }
+
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return { error: "로그인이 필요합니다." };
 
@@ -458,6 +488,167 @@ export async function updateApplicationStatus(
     await notify({ userId: row.student_id, template: "application_rejected", payload: { jobId: row.job_id } });
   }
 
+  revalidatePath("/biz");
+  return { ok: true };
+}
+
+// ─────────────────────────────────────────────
+// 관리자 — 회원/공고 생성·삭제 및 더미데이터 복원
+//   데모(목업) 모드: mockStore(쿠키)에 추가/삭제 표시를 기록.
+//   실 DB 모드: 관리자 권한 확인 후 실제 행 생성/삭제.
+// ─────────────────────────────────────────────
+function revalidateAdmin() {
+  revalidatePath("/admin");
+  revalidatePath("/admin/users");
+  revalidatePath("/admin/jobs");
+  revalidatePath("/admin/matches");
+  revalidatePath("/companies");
+}
+
+/** 관리자만 통과. 통과 시 서비스 롤 클라이언트, 아니면 null. */
+async function requireAdminDb() {
+  const profile = await getSessionProfile();
+  if (profile?.role !== "admin") return null;
+  return createAdminClient();
+}
+
+/** 관리자: 회원(학생/기업) 삭제. */
+export async function deleteAdminUser(id: string, role: Role): Promise<ActionState> {
+  if (!isSupabaseEnabled()) {
+    // 기업 회원은 company:<id>, 그 외(학생 등)는 student:<id> 로 기록
+    await addDeleted(`${role === "company" ? "company" : "student"}:${id}`);
+    revalidateAdmin();
+    return { ok: true };
+  }
+  const db = await requireAdminDb();
+  if (!db) return { error: "관리자만 삭제할 수 있습니다." };
+  const { error } = await db.from("profiles").delete().eq("id", id);
+  if (error) return { error: error.message };
+  revalidateAdmin();
+  return { ok: true };
+}
+
+/** 관리자: 공고 삭제. */
+export async function deleteAdminJob(id: string): Promise<ActionState> {
+  if (!isSupabaseEnabled()) {
+    await addDeleted(`job:${id}`);
+    revalidateAdmin();
+    return { ok: true };
+  }
+  const db = await requireAdminDb();
+  if (!db) return { error: "관리자만 삭제할 수 있습니다." };
+  const { error } = await db.from("jobs").delete().eq("id", id);
+  if (error) return { error: error.message };
+  revalidateAdmin();
+  return { ok: true };
+}
+
+/** 관리자: 기업 회원가입(회사 등록). 데모=목업 추가, 실 DB=계정+프로필+회사 생성. */
+export async function adminCreateCompany(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const name = String(formData.get("name") ?? "").trim();
+  const industry = String(formData.get("industry") ?? "").trim();
+  const region = String(formData.get("region") ?? "").trim();
+  const intro = String(formData.get("intro") ?? "").trim();
+  const perks = String(formData.get("perks") ?? "").trim();
+  const hashtags = formData.getAll("hashtags").map(String).filter(Boolean);
+  if (!name) return { error: "회사명을 입력해주세요." };
+
+  if (!isSupabaseEnabled()) {
+    const company: Company = { id: rid("mock-company-"), name, industry, region, intro, perks, hashtags };
+    await addCompany(company);
+    revalidateAdmin();
+    redirect("/admin/users");
+  }
+
+  const db = await requireAdminDb();
+  if (!db) return { error: "관리자만 등록할 수 있습니다." };
+
+  // 기업 계정 생성(이메일/비밀번호가 있으면 로그인 가능한 회원으로).
+  const email = String(formData.get("email") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
+  let ownerId: string | null = null;
+  if (email && password) {
+    const { data: created, error: cErr } = await db.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { role: "company", name },
+    });
+    if (cErr) return { error: cErr.message };
+    ownerId = created.user?.id ?? null;
+    if (ownerId) await db.from("profiles").upsert({ id: ownerId, role: "company", name });
+  }
+
+  const { error } = await db.from("companies").insert({
+    owner_id: ownerId, name, industry, region, intro, perks, hashtags,
+  });
+  if (error) return { error: error.message };
+  revalidateAdmin();
+  redirect("/admin/users");
+}
+
+/** 관리자: 특정 회사로 공고 등록(companyId 선택). */
+export async function adminCreateJob(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const companyId = String(formData.get("companyId") ?? "").trim();
+  const title = String(formData.get("title") ?? "").trim();
+  if (!companyId) return { error: "회사를 선택해주세요." };
+  if (!title) return { error: "공고 제목을 입력해주세요." };
+
+  const job: Omit<Job, "id"> = {
+    companyId,
+    title,
+    jobCategory: String(formData.get("jobCategory") ?? ""),
+    employmentType: String(formData.get("employmentType") ?? "fulltime") as EmploymentType,
+    region: String(formData.get("region") ?? ""),
+    requiredSkills: formData.getAll("skills").map(String),
+    description: String(formData.get("description") ?? ""),
+  };
+
+  if (!isSupabaseEnabled()) {
+    await addJob({ id: rid("mock-job-"), ...job });
+    revalidateAdmin();
+    redirect("/admin/jobs");
+  }
+
+  const db = await requireAdminDb();
+  if (!db) return { error: "관리자만 등록할 수 있습니다." };
+  const { error } = await db.from("jobs").insert({
+    company_id: companyId,
+    title: job.title,
+    job_category: job.jobCategory,
+    employment_type: job.employmentType,
+    region: job.region,
+    required_skills: job.requiredSkills,
+    description: job.description,
+    status: "open",
+  });
+  if (error) return { error: error.message };
+  revalidateAdmin();
+  redirect("/admin/jobs");
+}
+
+/** 기업: 본인 공고 삭제(마이페이지). 데모=삭제표시, 실 DB=본인 소유 행 삭제. */
+export async function deleteBizJob(id: string): Promise<ActionState> {
+  if (!isSupabaseEnabled()) {
+    await addDeleted(`job:${id}`);
+    revalidatePath("/biz");
+    return { ok: true };
+  }
+  const supabase = await createClient();
+  if (!supabase) return { error: "Supabase 미설정." };
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return { error: "로그인이 필요합니다." };
+  // RLS(본인 회사 공고만 삭제 가능) 전제. 삭제 후 대시보드 갱신.
+  const { error } = await supabase.from("jobs").delete().eq("id", id);
+  if (error) return { error: error.message };
+  revalidatePath("/biz");
+  return { ok: true };
+}
+
+/** 관리자: 데모 모드에서 추가/삭제한 더미데이터를 모두 원복(쿠키 초기화). */
+export async function resetMockAdminData(): Promise<ActionState> {
+  await clearMockStore();
+  revalidateAdmin();
   revalidatePath("/biz");
   return { ok: true };
 }
