@@ -301,7 +301,7 @@ export interface Applicant {
   submittedAt: string;
 }
 
-/** 한 공고의 지원자 목록(적합도순). */
+/** 한 공고의 지원자 목록(최신 지원순). */
 export async function getJobApplicants(jobId: string): Promise<Applicant[]> {
   const supabase = await createClient();
   const job = await getJobById(jobId);
@@ -325,7 +325,7 @@ export async function getJobApplicants(jobId: string): Promise<Applicant[]> {
       submittedAt: r.created_at?.slice(0, 10) ?? "",
     };
   });
-  return list.sort((a, b) => b.finalScore - a.finalScore);
+  return list.sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
 }
 
 export interface ApplicationDetail {

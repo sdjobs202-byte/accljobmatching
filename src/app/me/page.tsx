@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { MOCK_STUDENT } from "@/lib/mock";
-import { rankJobs } from "@/lib/matching";
 import { STATUS_LABEL, type AppStatus } from "@/lib/types";
 import { getMyApplications, getMyStudentProfile, getOpenJobs, getCompanies } from "@/lib/data";
 import { getSessionUser } from "@/lib/auth";
@@ -25,7 +24,7 @@ export default async function MyPage() {
   ]);
   const student = studentProfile ?? MOCK_STUDENT;
   const companyById = (id: string) => companies.find((c) => c.id === id);
-  const recommended = rankJobs(student, jobs).slice(0, 3);
+  const recommended = jobs.slice(0, 3);
 
   return (
     <div className="mx-auto max-w-4xl px-5 py-12">
@@ -66,8 +65,7 @@ export default async function MyPage() {
         {recommended.map((job) => (
           <Link key={job.id} href={`/companies/${job.companyId}?job=${job.id}`}
             className="rounded-xl border border-line p-5 hover:border-indigo">
-            <span className="badge badge-confirmed">적합도 {job.match.finalScore}</span>
-            <div className="mt-2 font-semibold">{job.title}</div>
+            <div className="font-semibold">{job.title}</div>
             <div className="text-sm text-muted">{companyById(job.companyId)?.name}</div>
           </Link>
         ))}

@@ -1,9 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MOCK_STUDENT } from "@/lib/mock";
-import { matchOne } from "@/lib/matching";
 import { EMPLOYMENT_LABEL } from "@/lib/types";
-import { getCompanyById, getJobsByCompany, getMyStudentProfile, getMyMatchKeywords } from "@/lib/data";
+import { getCompanyById, getJobsByCompany, getMyMatchKeywords } from "@/lib/data";
 import { companyHashtags, scoreHashtagMatch } from "@/lib/keywords";
 
 export default async function CompanyDetail({
@@ -16,16 +14,14 @@ export default async function CompanyDetail({
   const { id } = await params;
   const sp = await searchParams;
   // 모두 id(또는 세션)에만 의존 → 병렬 조회.
-  const [company, jobs, studentProfile, myKeywords] = await Promise.all([
+  const [company, jobs, myKeywords] = await Promise.all([
     getCompanyById(id),
     getJobsByCompany(id),
-    getMyStudentProfile(),
     getMyMatchKeywords(),
   ]);
   if (!company) notFound();
 
   const active = jobs.find((j) => j.id === sp.job) ?? jobs[0];
-  const student = studentProfile ?? MOCK_STUDENT;
 
   // 기업소개 해시태그 + 내 중간매칭 키워드와의 겹침
   const tags = companyHashtags(company);
@@ -53,7 +49,7 @@ export default async function CompanyDetail({
           <div className="flex items-center gap-2 mb-2">
             <span className="text-xs font-semibold text-muted">회사 키워드</span>
             {tagMatch && tagMatch.hits.length > 0 && (
-              <span className="badge badge-confirmed">내 키워드 {tagMatch.hits.length}개 일치 · {tagMatch.score}</span>
+              <span className="text-xs font-medium text-indigo">내 키워드와 겹쳐요</span>
             )}
           </div>
           <div className="flex flex-wrap gap-1.5">
@@ -86,33 +82,24 @@ export default async function CompanyDetail({
         ))}
       </div>
 
-      {active && (() => {
-        const m = matchOne(student, active);
-        return (
-          <div className="mt-6 rounded-[18px] border border-line p-7">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold">{active.title}</h2>
-              <span className="badge badge-confirmed">적합도 {m.finalScore}</span>
-            </div>
-            <p className="mt-1 text-sm text-muted">
-              {active.region} · {EMPLOYMENT_LABEL[active.employmentType]} · {active.jobCategory}
-            </p>
-            <div className="mt-4 flex flex-wrap gap-1.5">
-              {active.requiredSkills.map((s) => (
-                <span key={s} className="text-xs rounded-full bg-indigo-soft text-indigo px-2 py-0.5">{s}</span>
-              ))}
-            </div>
-            <p className="mt-5 text-ink/80">{active.description}</p>
-            <div className="mt-4 rounded-xl bg-indigo-soft/50 p-4 text-sm">
-              <b className="text-indigo">AI 매칭 코멘트</b> · {m.reason}
-            </div>
-            <Link href={`/apply/${active.id}`}
-              className="mt-6 inline-block rounded-full bg-indigo text-white px-7 py-3 font-semibold">
-              이 공고에 지원하기
-            </Link>
+      {active && (
+        <div className="mt-6 rounded-[18px] border border-line p-7">
+          <h2 className="text-xl font-bold">{active.title}</h2>
+          <p className="mt-1 text-sm text-muted">
+            {active.region} · {EMPLOYMENT_LABEL[active.employmentType]} · {active.jobCategory}
+          </p>
+          <div className="mt-4 flex flex-wrap gap-1.5">
+            {active.requiredSkills.map((s) => (
+              <span key={s} className="text-xs rounded-full bg-indigo-soft text-indigo px-2 py-0.5">{s}</span>
+            ))}
           </div>
-        );
-      })()}
+          <p className="mt-5 text-ink/80">{active.description}</p>
+          <Link href={`/apply/${active.id}`}
+            className="mt-6 inline-block rounded-full bg-indigo text-white px-7 py-3 font-semibold">
+            이 공고에 지원하기
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
