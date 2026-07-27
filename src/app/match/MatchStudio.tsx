@@ -189,13 +189,7 @@ export default function MatchStudio({
           <ul className="space-y-3">
             {ranked.slice(0, 6).map(({ company, match }) => (
               <li key={company.id} className="rounded-xl bg-white border border-line p-4">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-bold text-sm">{company.name}</span>
-                  <span className="text-xs font-bold text-indigo">{match.score}</span>
-                </div>
-                <div className="mt-2 h-1.5 rounded-full bg-line overflow-hidden">
-                  <div className="h-full bg-indigo rounded-full" style={{ width: `${match.score}%` }} />
-                </div>
+                <span className="font-bold text-sm">{company.name}</span>
                 <div className="mt-2.5 flex flex-wrap gap-1">
                   {match.hits.slice(0, 4).map((h) => (
                     <span key={h} className="text-[11px] rounded-full bg-lime/40 text-ink px-2 py-0.5 font-medium">

@@ -1,8 +1,6 @@
 import Link from "next/link";
-import { MOCK_STUDENT } from "@/lib/mock";
-import { rankJobs } from "@/lib/matching";
 import { EMPLOYMENT_LABEL } from "@/lib/types";
-import { getOpenJobs, getCompanies, getMyStudentProfile, getMyMatchKeywords } from "@/lib/data";
+import { getOpenJobs, getCompanies, getMyMatchKeywords } from "@/lib/data";
 import { companyHashtags, scoreHashtagMatch } from "@/lib/keywords";
 
 export default async function CompaniesPage({
@@ -12,10 +10,9 @@ export default async function CompaniesPage({
 }) {
   const sp = await searchParams;
   // 서로 독립적인 조회는 병렬로(왕복 지연 누적 방지).
-  const [allJobs, companies, studentProfile, myKeywords] = await Promise.all([
+  const [allJobs, companies, myKeywords] = await Promise.all([
     getOpenJobs(),
     getCompanies(),
-    getMyStudentProfile(),
     getMyMatchKeywords(),
   ]);
   const companyById = (id: string) => companies.find((c) => c.id === id);
@@ -25,24 +22,22 @@ export default async function CompaniesPage({
   if (sp.region) jobs = jobs.filter((j) => j.region === sp.region);
   if (sp.q) jobs = jobs.filter((j) => j.title.includes(sp.q!));
 
-  // 로그인 학생 프로필 기준 적합도 정렬 (미로그인 시 데모 학생)
-  const student = studentProfile ?? MOCK_STUDENT;
-  const baseRanked = rankJobs(student, jobs);
   const categories = [...new Set(allJobs.map((j) => j.jobCategory))];
 
-  // 중간매칭 키워드 부스팅: 저장한 키워드가 있으면 기업 해시태그 겹침으로 재정렬.
-  const ranked = baseRanked
+  // 저장한 중간매칭 키워드가 있으면 기업 해시태그 겹침이 많은 순으로 조용히 재정렬.
+  // (점수는 표시하지 않음) 키워드가 없으면 getOpenJobs 기본값인 최신 등록순 유지.
+  const ranked = jobs
     .map((job) => {
       const co = companyById(job.companyId);
       const kw = myKeywords.length && co ? scoreHashtagMatch(myKeywords, companyHashtags(co)) : { score: 0, hits: [] };
-      return { ...job, kw, blended: Math.round(job.match.finalScore * 0.6 + kw.score * 0.4) };
+      return { ...job, kw };
     })
-    .sort((a, b) => (myKeywords.length ? b.blended - a.blended : b.match.finalScore - a.match.finalScore));
+    .sort((a, b) => (myKeywords.length ? b.kw.score - a.kw.score : 0));
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-12">
       <h1 className="hail text-3xl mb-2">너에게 맞는 자리부터.</h1>
-      <p className="text-muted text-sm mb-6">{student.name}님 프로필 기준 적합도순 정렬</p>
+      <p className="text-muted text-sm mb-6">{myKeywords.length ? "내 키워드에 맞춰 정렬했어요" : "최신 채용 공고"}</p>
 
       {/* 중간매칭 키워드 배너 */}
       {myKeywords.length > 0 ? (
@@ -81,10 +76,7 @@ export default async function CompaniesPage({
           return (
             <Link key={job.id} href={`/companies/${job.companyId}?job=${job.id}`}
               className="rounded-[18px] border border-line p-6 hover:border-indigo transition-colors flex flex-col">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-muted">{co?.name}</span>
-                <span className="badge badge-confirmed">적합도 {myKeywords.length ? job.blended : job.match.finalScore}</span>
-              </div>
+              <span className="text-xs font-semibold text-muted">{co?.name}</span>
               <h2 className="mt-3 text-lg font-bold">{job.title}</h2>
               <p className="mt-1 text-sm text-muted">{co?.region} · {EMPLOYMENT_LABEL[job.employmentType]}</p>
               <div className="mt-3 flex flex-wrap gap-1.5">
@@ -99,7 +91,6 @@ export default async function CompaniesPage({
                   ))}
                 </div>
               )}
-              <p className="mt-4 text-xs text-ink/70 border-t border-line pt-3">💡 {job.match.reason}</p>
             </Link>
           );
         })}

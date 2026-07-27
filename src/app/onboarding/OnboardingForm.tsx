@@ -111,7 +111,7 @@ export default function OnboardingForm({ role, name, phone, initialData }: Onboa
 
           <div>
             <label className="text-sm font-semibold block mb-2">보유 역량 태그 <span className="text-indigo">*</span></label>
-            <p className="text-xs text-muted mb-3">AI 매칭 점수에 직접 반영돼요. 최대한 많이 선택하세요.</p>
+            <p className="text-xs text-muted mb-3">기업이 보는 프로필과 공고 지원에 활용돼요. 최대한 많이 선택하세요.</p>
             <div className="flex flex-wrap gap-2">
               {SKILL_OPTIONS.map((s) => (
                 <button

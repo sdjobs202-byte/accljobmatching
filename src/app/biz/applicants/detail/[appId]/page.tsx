@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { matchOne } from "@/lib/matching";
 import { STATUS_LABEL, type AppStatus } from "@/lib/types";
 import { getApplicationDetail } from "@/lib/data";
 import StatusActions from "../../StatusActions";
@@ -23,7 +22,6 @@ export default async function ApplicantDetailPage({
   if (!app) notFound();
 
   const { student, job } = app;
-  const m = matchOne(student, job);
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-12">
@@ -45,33 +43,24 @@ export default async function ApplicantDetailPage({
         <span className={`badge ${STATUS_CLS[app.status]}`}>{STATUS_LABEL[app.status]}</span>
       </div>
 
-      {/* 적합도 카드 */}
-      <div className="mt-7 rounded-[18px] bg-indigo-soft p-6 flex flex-col sm:flex-row items-start sm:items-center gap-5">
-        <div className="shrink-0">
-          <div className="text-xs font-semibold text-indigo mb-1">AI 매칭 점수</div>
-          <div className="text-5xl font-extrabold text-indigo leading-none">
-            {m.finalScore}
-            <span className="text-lg font-normal">/100</span>
-          </div>
+      {/* 요구 역량 보유 현황 */}
+      <div className="mt-7 rounded-[18px] bg-indigo-soft p-6">
+        <div className="text-xs font-semibold text-indigo mb-3">요구 역량 보유 현황</div>
+        <div className="flex flex-wrap gap-1.5">
+          {job.requiredSkills.map((s) => (
+            <span
+              key={s}
+              className={`text-xs rounded-full px-2.5 py-1 font-semibold ${
+                student.skills.includes(s)
+                  ? "bg-lime text-ink"
+                  : "bg-white text-muted border border-line"
+              }`}
+            >
+              {s}
+            </span>
+          ))}
         </div>
-        <div className="flex-1">
-          <p className="text-sm text-ink/80 mb-3">{m.reason}</p>
-          <div className="flex flex-wrap gap-1.5">
-            {job.requiredSkills.map((s) => (
-              <span
-                key={s}
-                className={`text-xs rounded-full px-2.5 py-1 font-semibold ${
-                  student.skills.includes(s)
-                    ? "bg-lime text-ink"
-                    : "bg-white text-muted border border-line"
-                }`}
-              >
-                {s}
-              </span>
-            ))}
-          </div>
-          <p className="text-xs text-muted mt-2">초록 = 보유 역량, 회색 = 미보유</p>
-        </div>
+        <p className="text-xs text-muted mt-2">초록 = 보유 역량, 회색 = 미보유</p>
       </div>
 
       {/* 한 줄 소개 */}

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "잡매칭 — 다음 기회를, 너에게",
-  description: "대학생과 채용기업을 잇는 잡매칭 플랫폼. 조건 매칭 + AI 적합도 점수로 지원부터 면접 확정까지.",
+  description: "대학생과 채용기업을 잇는 잡매칭 플랫폼. 조건에 맞는 채용을 지원부터 면접 확정까지 한 흐름으로.",
 };
 
 export default function Home() {
@@ -17,7 +17,7 @@ export default function Home() {
           <span className="bg-lime px-2 leading-relaxed">너에게.</span>
         </h1>
         <p className="mt-6 text-lg text-muted max-w-xl">
-          조건에 맞는 기업을 정렬하고, 적합도와 한 줄 이유까지 — 지원부터 면접 확정까지 한 흐름으로 잇습니다.
+          조건에 맞는 기업을 한눈에 — 지원부터 면접 확정까지 한 흐름으로 잇습니다.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <Link href="/companies" className="rounded-full bg-indigo text-white px-6 py-3 font-semibold">
@@ -49,7 +49,7 @@ export default function Home() {
       <section className="mx-auto max-w-6xl px-5 py-16 grid sm:grid-cols-3 gap-5">
         {[
           { t: "학생", d: "프로필 등록하고 맞춤 공고를 추천받으세요.", href: "/signup?role=student", cta: "학생 가입" },
-          { t: "기업", d: "공고를 올리고 적합한 지원자를 점수순으로.", href: "/signup?role=company", cta: "기업 가입" },
+          { t: "기업", d: "공고를 올리고 지원자를 한눈에 관리하세요.", href: "/signup?role=company", cta: "기업 가입" },
           { t: "운영자", d: "회원·지원·매칭 현황을 한눈에.", href: "/admin", cta: "관리자" },
         ].map((c) => (
           <Link key={c.t} href={c.href}
