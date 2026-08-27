@@ -3,6 +3,7 @@ import { MOCK_STUDENTS } from "./mock";
 import { mockCompanies, mockJobs, readDeleted } from "./mockStore";
 import type { Company, Job, StudentProfile, EmploymentType, AppStatus, Role } from "./types";
 import { matchOne } from "./matching";
+import { normalizeExternalUrl } from "./url";
 import { getSessionProfile } from "./auth";
 import { createAdminClient, isSupabaseEnabled } from "./supabase/admin";
 import { cookies } from "next/headers";
@@ -328,13 +329,62 @@ export async function getJobApplicants(jobId: string): Promise<Applicant[]> {
   return list.sort((a, b) => b.submittedAt.localeCompare(a.submittedAt));
 }
 
+/** 미리보기·다운로드에 필요한 형태로 가공한 첨부 이력서. */
+export interface ResumeFile {
+  name: string;                          // 원본 파일명(업로드 시 붙인 타임스탬프 제거)
+  kind: "pdf" | "image" | "other";       // 브라우저에서 인라인 미리보기 가능한 형식인지
+  viewUrl: string;                       // 인라인 열람용
+  downloadUrl: string;                   // 첨부 다운로드용(Content-Disposition: attachment)
+}
+
+/** 서명 URL 유효시간. 검토 도중 만료돼 미리보기가 깨지지 않도록 30분. */
+const RESUME_URL_TTL = 60 * 30;
+
+const IMAGE_EXTS = ["png", "jpg", "jpeg", "gif", "webp", "avif"];
+
+function resumeKind(name: string): ResumeFile["kind"] {
+  const ext = name.split(".").pop()?.toLowerCase() ?? "";
+  if (ext === "pdf") return "pdf";
+  if (IMAGE_EXTS.includes(ext)) return "image";
+  return "other"; // docx·hwp 등은 브라우저가 렌더하지 못하므로 다운로드만 제공
+}
+
+/**
+ * 저장된 이력서 값을 미리보기·다운로드용으로 변환.
+ * 비공개 버킷 경로면 권한자에게 서명 URL 2개(열람용·다운로드용)를 발급한다.
+ * 다운로드는 교차 출처라 `<a download>`가 먹지 않으므로 서명 시점에
+ * Content-Disposition을 attachment로 지정해야 한다.
+ */
+async function buildResumeFile(stored: string | null): Promise<ResumeFile | null> {
+  if (!stored) return null;
+
+  // 레거시(과거 공개 URL "http…"): 그대로 사용. 교차 출처라 강제 다운로드는 불가.
+  if (stored.startsWith("http")) {
+    const name = decodeURIComponent(stored.split("/").pop()?.split("?")[0] ?? "이력서");
+    return { name, kind: resumeKind(name), viewUrl: stored, downloadUrl: stored };
+  }
+
+  const admin = createAdminClient();
+  if (!admin) return null;
+  // 업로드 경로는 `${userId}/${timestamp}_${원본파일명}` → 원본 파일명 복원
+  const name = (stored.split("/").pop() ?? "이력서").replace(/^\d+_/, "");
+  const bucket = admin.storage.from("resumes");
+  const [view, download] = await Promise.all([
+    bucket.createSignedUrl(stored, RESUME_URL_TTL),
+    bucket.createSignedUrl(stored, RESUME_URL_TTL, { download: name }),
+  ]);
+  const viewUrl = view.data?.signedUrl;
+  if (!viewUrl) return null;
+  return { name, kind: resumeKind(name), viewUrl, downloadUrl: download.data?.signedUrl ?? viewUrl };
+}
+
 export interface ApplicationDetail {
   applicationId: string;
   status: AppStatus;
   student: StudentProfile;
   job: Job;
   coverLetter: string;
-  resumeUrl: string | null;
+  resume: ResumeFile | null;
   portfolioUrl: string | null;
   submittedAt: string;
 }
@@ -358,18 +408,8 @@ export async function getApplicationDetail(appId: string): Promise<ApplicationDe
   const job = await getJobById(r.job_id);
   if (!job) return null;
 
-  // 이력서: 비공개 버킷 경로 → 권한자(여기까지 RLS 통과한 기업/관리자)에게만 서명 URL 발급.
-  // 레거시(과거 공개 URL "http…")는 그대로 사용.
-  let resumeUrl: string | null = r.resume_url;
-  if (resumeUrl && !resumeUrl.startsWith("http")) {
-    const admin = createAdminClient();
-    if (admin) {
-      const { data: signed } = await admin.storage
-        .from("resumes")
-        .createSignedUrl(resumeUrl, 60 * 10); // 10분 유효
-      resumeUrl = signed?.signedUrl ?? null;
-    }
-  }
+  // 이력서: 권한자(여기까지 RLS 통과한 기업/관리자)에게만 서명 URL 발급.
+  const resume = await buildResumeFile(r.resume_url);
 
   return {
     applicationId: r.id,
@@ -377,8 +417,9 @@ export async function getApplicationDetail(appId: string): Promise<ApplicationDe
     student: toStudentProfile(r.student_id, r.student),
     job,
     coverLetter: r.cover_letter ?? "",
-    resumeUrl,
-    portfolioUrl: r.portfolio_url,
+    resume,
+    // 지원자가 입력한 값이라 렌더 직전에 다시 통과시킨다(정규화 도입 이전 저장분도 여기서 구제).
+    portfolioUrl: normalizeExternalUrl(r.portfolio_url),
     submittedAt: r.created_at?.slice(0, 10) ?? "",
   };
 }
@@ -487,6 +528,7 @@ function buildMockMatches(students: StudentProfile[], jobs: Job[], companies: Co
       jobId: best.id,
       status: STATUS_CYCLE[i % STATUS_CYCLE.length],
       finalScore: bestScore,
+      submittedAt: MOCK_JOIN_DATE,
     };
   });
 }
@@ -613,7 +655,7 @@ export async function getAdminJobs(): Promise<AdminJob[]> {
 export interface AdminMatch {
   applicationId: string; studentName: string; jobTitle: string; companyName: string;
   companyId: string; jobId: string;
-  status: AppStatus; finalScore: number;
+  status: AppStatus; finalScore: number; submittedAt: string;
 }
 
 export async function getAdminMatches(): Promise<AdminMatch[]> {
@@ -627,10 +669,10 @@ export async function getAdminMatches(): Promise<AdminMatch[]> {
   const jobMap = new Map(jobs.map((j) => [j.id, j]));
   const { data } = await db
     .from("applications")
-    .select("id, status, job_id, student:profiles!student_id(name, student_profiles(dept, region, skills, desired_jobs, intro)), jobs(title, company_id, companies(name))")
+    .select("id, status, job_id, created_at, student:profiles!student_id(name, student_profiles(dept, region, skills, desired_jobs, intro)), jobs(title, company_id, companies(name))")
     .order("created_at", { ascending: false });
   type Row = {
-    id: string; status: AppStatus; job_id: string;
+    id: string; status: AppStatus; job_id: string; created_at: string;
     student: EmbeddedStudent | null;
     jobs: { title: string; company_id: string; companies: { name: string } | null } | null;
   };
@@ -646,6 +688,7 @@ export async function getAdminMatches(): Promise<AdminMatch[]> {
       jobId: r.job_id,
       status: r.status,
       finalScore: score,
+      submittedAt: r.created_at?.slice(0, 10) ?? "",
     };
   });
 }
