@@ -3,9 +3,39 @@ import { useState } from "react";
 import { useActionState } from "react";
 import { submitApplication, type ActionState } from "@/lib/actions";
 
+/**
+ * 첨부 가능한 최대 용량(MB).
+ * 이력서는 서버 액션 본문으로 전송되므로 next.config 의 bodySizeLimit(10mb) 안에 들어와야 한다.
+ * 자기소개서·멀티파트 오버헤드를 감안해 여유를 두고 8MB에서 미리 막는다.
+ */
+const MAX_FILE_MB = 8;
+
 export default function ApplyForm({ jobId }: { jobId: string }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(submitApplication, {});
   const [fileName, setFileName] = useState<string | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
+
+  // 용량 초과 파일을 그대로 제출하면 서버 액션이 본문 제한에 걸려 흰 화면으로 떨어진다.
+  // 제출 전에 걸러서 무엇이 잘못됐는지 알려준다.
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) {
+      setFileName(null);
+      setFileError(null);
+      return;
+    }
+    if (file.size > MAX_FILE_MB * 1024 * 1024) {
+      e.target.value = ""; // 선택 해제 — 초과 파일이 폼에 남지 않도록
+      setFileName(null);
+      setFileError(
+        `파일이 너무 큽니다 (${(file.size / 1024 / 1024).toFixed(1)}MB). ` +
+          `${MAX_FILE_MB}MB 이하로 압축하거나 페이지 수를 줄여서 올려주세요.`,
+      );
+      return;
+    }
+    setFileError(null);
+    setFileName(file.name);
+  }
 
   return (
     <form action={formAction} className="space-y-5">
@@ -20,7 +50,7 @@ export default function ApplyForm({ jobId }: { jobId: string }) {
               {fileName ? "다른 파일로 바꾸기" : "이력서 파일 첨부하기"}
             </span>
             <span className="block text-xs text-muted truncate">
-              {fileName ? `✓ ${fileName}` : "PDF 파일을 눌러서 올려주세요"}
+              {fileName ? `✓ ${fileName}` : `PDF 파일을 눌러서 올려주세요 (최대 ${MAX_FILE_MB}MB)`}
             </span>
           </span>
           <span className="rounded-full bg-indigo text-white px-5 py-2.5 text-sm font-semibold shrink-0 group-hover:bg-indigo/90 transition-colors">
@@ -31,9 +61,10 @@ export default function ApplyForm({ jobId }: { jobId: string }) {
             type="file"
             accept=".pdf"
             className="hidden"
-            onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)}
+            onChange={handleFileChange}
           />
         </label>
+        {fileError && <p className="mt-2 text-sm text-red-500">{fileError}</p>}
       </div>
       <div>
         <label className="text-sm font-semibold">자기소개서</label>
