@@ -2,7 +2,11 @@ import Link from "next/link";
 import { type ReactNode } from "react";
 import { Logo } from "@/components/Logo";
 import { getSessionProfile } from "@/lib/auth";
-import { isSupabaseEnabled } from "@/lib/supabase/admin";
+import {
+  isServiceRoleConfigured,
+  isSupabaseEnabled,
+  SERVICE_ROLE_MISSING_MSG,
+} from "@/lib/supabase/admin";
 
 const NAV = [
   { href: "/admin", label: "대시보드", icon: "▦" },
@@ -14,6 +18,10 @@ const NAV = [
 ];
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
+  // 서비스 롤 키가 없으면 관리자 조회·쓰기가 전부 막힌다.
+  // 예전엔 조용히 빈 목록으로만 보여 원인 파악이 어려웠으므로 배너로 명시한다.
+  const serviceRoleMissing = isSupabaseEnabled() && !isServiceRoleConfigured();
+
   // 관리자 접근 가드 (Supabase 연동 시에만 적용)
   if (isSupabaseEnabled()) {
     const profile = await getSessionProfile();
@@ -61,7 +69,21 @@ export default async function AdminLayout({ children }: { children: ReactNode })
       </aside>
 
       {/* 메인 */}
-      <main className="flex-1 overflow-auto bg-gray-50/30">{children}</main>
+      <main className="flex-1 overflow-auto bg-gray-50/30">
+        {serviceRoleMissing && (
+          <div className="border-b border-rose-200 bg-rose-50 px-8 py-4">
+            <p className="text-sm font-bold text-rose-800">관리자 데이터를 불러올 수 없습니다</p>
+            <p className="mt-1 text-sm text-rose-700">{SERVICE_ROLE_MISSING_MSG}</p>
+            <p className="mt-1 text-xs text-rose-600">
+              Supabase → Settings → API → <code className="font-mono">service_role</code> 키를 복사해
+              Vercel → Settings → Environment Variables 에{" "}
+              <code className="font-mono">SUPABASE_SERVICE_ROLE_KEY</code> 로 추가하세요.
+              아래 목록이 비어 있는 것은 실제 데이터가 없어서가 아닙니다.
+            </p>
+          </div>
+        )}
+        {children}
+      </main>
     </div>
   );
 }

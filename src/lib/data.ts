@@ -507,7 +507,10 @@ export interface AdminStats {
 async function adminDb() {
   const profile = await getSessionProfile();
   if (profile?.role !== "admin") return null;
-  return createAdminClient();
+  const db = createAdminClient();
+  // 키 누락은 화면상 "0건"과 구분이 안 되므로 서버 로그에 원인을 남긴다(Vercel 런타임 로그).
+  if (!db) console.error("[admin] SUPABASE_SERVICE_ROLE_KEY 미설정 — 관리자 조회가 모두 빈 값으로 반환됩니다.");
+  return db;
 }
 
 async function countTable(
