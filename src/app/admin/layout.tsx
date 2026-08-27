@@ -15,6 +15,9 @@ const NAV = [
   { href: "/admin/jobs", label: "공고 관리", icon: "📋" },
   { href: "/admin/jobs/new", label: "공고 등록", icon: "✍️" },
   { href: "/admin/matches", label: "매칭 현황", icon: "⚡" },
+  { href: "/admin/applications", label: "지원 현황", icon: "📑" },
+  { href: "/admin/applications?status=interview_confirmed", label: "면접 확정", icon: "✅" },
+  { href: "/admin/applications?status=rejected", label: "미선정", icon: "❌" },
 ];
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {

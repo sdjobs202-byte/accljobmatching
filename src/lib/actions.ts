@@ -9,6 +9,7 @@ import {
   SERVICE_ROLE_MISSING_MSG,
 } from "./supabase/admin";
 import { getSessionProfile } from "./auth";
+import { normalizeExternalUrl } from "./url";
 import { getMyCompany } from "./data";
 import {
   addDeleted,
@@ -437,7 +438,8 @@ export async function submitApplication(_prev: ActionState, formData: FormData):
     student_id: auth.user.id,
     resume_url: resumePath,
     cover_letter: String(formData.get("coverLetter") ?? ""),
-    portfolio_url: String(formData.get("portfolioUrl") ?? "") || null,
+    // 스킴 없는 입력은 https를 붙이고, http(s)가 아닌 스킴은 버린다.
+    portfolio_url: normalizeExternalUrl(String(formData.get("portfolioUrl") ?? "")),
     status: "submitted",
   });
   if (error) {
