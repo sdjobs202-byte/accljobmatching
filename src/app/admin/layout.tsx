@@ -7,17 +7,28 @@ import {
   isSupabaseEnabled,
   SERVICE_ROLE_MISSING_MSG,
 } from "@/lib/supabase/admin";
+import {
+  IconBolt,
+  IconBuilding,
+  IconCheckCircle,
+  IconClipboardList,
+  IconDashboard,
+  IconDocuments,
+  IconPencil,
+  IconUsers,
+  IconXCircle,
+} from "@/components/icons";
 
 const NAV = [
-  { href: "/admin", label: "대시보드", icon: "▦" },
-  { href: "/admin/users", label: "회원 관리", icon: "👤" },
-  { href: "/admin/companies/new", label: "기업 등록", icon: "🏢" },
-  { href: "/admin/jobs", label: "공고 관리", icon: "📋" },
-  { href: "/admin/jobs/new", label: "공고 등록", icon: "✍️" },
-  { href: "/admin/matches", label: "매칭 현황", icon: "⚡" },
-  { href: "/admin/applications", label: "지원 현황", icon: "📑" },
-  { href: "/admin/applications?status=interview_confirmed", label: "면접 확정", icon: "✅" },
-  { href: "/admin/applications?status=rejected", label: "미선정", icon: "❌" },
+  { href: "/admin", label: "대시보드", Icon: IconDashboard },
+  { href: "/admin/users", label: "회원 관리", Icon: IconUsers },
+  { href: "/admin/companies/new", label: "기업 등록", Icon: IconBuilding },
+  { href: "/admin/jobs", label: "공고 관리", Icon: IconClipboardList },
+  { href: "/admin/jobs/new", label: "공고 등록", Icon: IconPencil },
+  { href: "/admin/matches", label: "매칭 현황", Icon: IconBolt },
+  { href: "/admin/applications", label: "지원 현황", Icon: IconDocuments },
+  { href: "/admin/applications?status=interview_confirmed", label: "면접 확정", Icon: IconCheckCircle },
+  { href: "/admin/applications?status=rejected", label: "미선정", Icon: IconXCircle },
 ];
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
@@ -50,14 +61,14 @@ export default async function AdminLayout({ children }: { children: ReactNode })
         <Logo iconSize={24} />
         <p className="text-xs text-muted mb-8">관리자 콘솔</p>
         <nav className="space-y-1">
-          {NAV.map((n) => (
+          {NAV.map(({ href, label, Icon }) => (
             <Link
-              key={n.href}
-              href={n.href}
+              key={href}
+              href={href}
               className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-medium text-ink/70 hover:bg-indigo-soft hover:text-indigo transition-colors"
             >
-              <span className="text-base leading-none">{n.icon}</span>
-              {n.label}
+              <Icon className="shrink-0" />
+              {label}
             </Link>
           ))}
         </nav>

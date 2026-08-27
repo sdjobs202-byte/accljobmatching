@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { IconRotateCcw } from "@/components/icons";
 
 type Result = { error?: string; ok?: boolean };
 
@@ -46,9 +47,10 @@ export function ResetButton({ action }: { action: () => Promise<Result> }) {
           await action();
         });
       }}
-      className="text-xs rounded-full border border-indigo text-indigo px-4 py-2 font-semibold hover:bg-indigo hover:text-white transition-colors disabled:opacity-50 whitespace-nowrap"
+      className="inline-flex items-center gap-1.5 text-xs rounded-full border border-indigo text-indigo px-4 py-2 font-semibold hover:bg-indigo hover:text-white transition-colors disabled:opacity-50 whitespace-nowrap"
     >
-      {pending ? "복원중…" : "↺ 더미데이터 복원"}
+      {!pending && <IconRotateCcw size={14} />}
+      {pending ? "복원중…" : "더미데이터 복원"}
     </button>
   );
 }
