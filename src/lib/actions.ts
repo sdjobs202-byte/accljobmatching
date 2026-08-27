@@ -3,7 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "./supabase/server";
-import { createAdminClient, isSupabaseEnabled } from "./supabase/admin";
+import {
+  createAdminClient,
+  isSupabaseEnabled,
+  SERVICE_ROLE_MISSING_MSG,
+} from "./supabase/admin";
 import { getSessionProfile } from "./auth";
 import { getMyCompany } from "./data";
 import {
@@ -505,11 +509,20 @@ function revalidateAdmin() {
   revalidatePath("/companies");
 }
 
-/** 관리자만 통과. 통과 시 서비스 롤 클라이언트, 아니면 null. */
-async function requireAdminDb() {
+type AdminDbResult =
+  | { db: NonNullable<ReturnType<typeof createAdminClient>>; error?: never }
+  | { db?: never; error: string };
+
+/**
+ * 관리자만 통과. 통과 시 서비스 롤 클라이언트, 아니면 실패 사유.
+ * 권한 부족과 서비스 롤 키 누락은 원인이 전혀 다르므로 메시지를 구분한다.
+ */
+async function requireAdminDb(): Promise<AdminDbResult> {
   const profile = await getSessionProfile();
-  if (profile?.role !== "admin") return null;
-  return createAdminClient();
+  if (profile?.role !== "admin") return { error: "관리자 계정만 사용할 수 있습니다." };
+  const db = createAdminClient();
+  if (!db) return { error: SERVICE_ROLE_MISSING_MSG };
+  return { db };
 }
 
 /** 관리자: 회원(학생/기업) 삭제. */
@@ -520,8 +533,8 @@ export async function deleteAdminUser(id: string, role: Role): Promise<ActionSta
     revalidateAdmin();
     return { ok: true };
   }
-  const db = await requireAdminDb();
-  if (!db) return { error: "관리자만 삭제할 수 있습니다." };
+  const { db, error: denied } = await requireAdminDb();
+  if (!db) return { error: denied };
   const { error } = await db.from("profiles").delete().eq("id", id);
   if (error) return { error: error.message };
   revalidateAdmin();
@@ -535,8 +548,8 @@ export async function deleteAdminJob(id: string): Promise<ActionState> {
     revalidateAdmin();
     return { ok: true };
   }
-  const db = await requireAdminDb();
-  if (!db) return { error: "관리자만 삭제할 수 있습니다." };
+  const { db, error: denied } = await requireAdminDb();
+  if (!db) return { error: denied };
   const { error } = await db.from("jobs").delete().eq("id", id);
   if (error) return { error: error.message };
   revalidateAdmin();
@@ -560,8 +573,8 @@ export async function adminCreateCompany(_prev: ActionState, formData: FormData)
     redirect("/admin/users");
   }
 
-  const db = await requireAdminDb();
-  if (!db) return { error: "관리자만 등록할 수 있습니다." };
+  const { db, error: denied } = await requireAdminDb();
+  if (!db) return { error: denied };
 
   // 기업 계정 생성(이메일/비밀번호가 있으면 로그인 가능한 회원으로).
   const email = String(formData.get("email") ?? "").trim();
@@ -610,8 +623,8 @@ export async function adminCreateJob(_prev: ActionState, formData: FormData): Pr
     redirect("/admin/jobs");
   }
 
-  const db = await requireAdminDb();
-  if (!db) return { error: "관리자만 등록할 수 있습니다." };
+  const { db, error: denied } = await requireAdminDb();
+  if (!db) return { error: denied };
   const { error } = await db.from("jobs").insert({
     company_id: companyId,
     title: job.title,

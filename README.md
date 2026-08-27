@@ -13,6 +13,17 @@ cp .env.example .env.local   # 비워두면 목업 데이터로 동작
 npm run dev                  # http://localhost:3000
 ```
 
+### 환경변수 (배포 시 Vercel에도 동일하게 등록)
+| 변수 | 없으면 |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` · `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 전체가 목업(데모) 모드로 동작 |
+| `SUPABASE_SERVICE_ROLE_KEY` | **관리자 콘솔(`/admin`)이 전 화면 0건으로 표시되고 등록·삭제가 실패** |
+| `ANTHROPIC_API_KEY` | AI 코멘트 없이 규칙 기반 점수만 사용 |
+
+`SUPABASE_SERVICE_ROLE_KEY`는 Supabase → Settings → API → `service_role`. 서버 전용이라
+`NEXT_PUBLIC_` 접두사를 붙이면 안 되고, 공개 화면은 ANON 키만 쓰기 때문에 이 키가 빠져도
+사이트는 정상으로 보인다 — 관리자 화면만 조용히 비게 된다.
+
 ## 현재 동작하는 화면 (목업 데이터)
 | 경로 | 내용 |
 |---|---|
