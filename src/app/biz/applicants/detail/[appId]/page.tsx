@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { STATUS_LABEL, type AppStatus } from "@/lib/types";
 import { getApplicationDetail } from "@/lib/data";
+import { IconDownload, IconExternalLink, IconFile } from "@/components/icons";
 import StatusActions from "../../StatusActions";
 
 const STATUS_CLS: Record<AppStatus, string> = {
@@ -85,15 +86,19 @@ export default async function ApplicantDetailPage({
         {app.resume ? (
           <div className="rounded-[18px] border border-line overflow-hidden bg-white">
             <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-line bg-gray-50">
-              <span className="text-sm font-semibold break-all">📄 {app.resume.name}</span>
+              <span className="flex items-center gap-2 text-sm font-semibold break-all">
+                <IconFile className="shrink-0 text-muted" />
+                {app.resume.name}
+              </span>
               <div className="flex items-center gap-2">
                 <a href={app.resume.viewUrl} target="_blank" rel="noopener noreferrer"
                   className="text-xs rounded-full border border-line px-3.5 py-1.5 font-semibold text-muted hover:border-indigo hover:text-indigo transition-colors">
                   새 탭에서 열기
                 </a>
                 <a href={app.resume.downloadUrl}
-                  className="text-xs rounded-full bg-indigo text-white px-3.5 py-1.5 font-semibold hover:bg-indigo/90 transition-colors">
-                  ⭳ 다운로드
+                  className="inline-flex items-center gap-1.5 text-xs rounded-full bg-indigo text-white px-3.5 py-1.5 font-semibold hover:bg-indigo/90 transition-colors">
+                  <IconDownload size={15} />
+                  다운로드
                 </a>
               </div>
             </div>
@@ -119,8 +124,9 @@ export default async function ApplicantDetailPage({
 
         {app.portfolioUrl && (
           <a href={app.portfolioUrl} target="_blank" rel="noopener noreferrer"
-            className="mt-3 inline-block rounded-full border border-line px-5 py-2.5 text-sm font-semibold hover:border-indigo transition-colors">
-            🔗 포트폴리오 보기
+            className="mt-3 inline-flex items-center gap-2 rounded-full border border-line px-5 py-2.5 text-sm font-semibold hover:border-indigo transition-colors">
+            <IconExternalLink size={16} />
+            포트폴리오 보기
           </a>
         )}
       </div>
