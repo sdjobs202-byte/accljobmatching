@@ -433,13 +433,25 @@ export async function submitApplication(_prev: ActionState, formData: FormData):
     if (!upErr) resumePath = path;
   }
 
+  // 포트폴리오 파일 업로드(이력서와 같은 비공개 버킷). 파일을 첨부하면 링크보다 우선한다.
+  let portfolioPath: string | null = null;
+  const portfolioFile = formData.get("portfolio");
+  if (portfolioFile instanceof File && portfolioFile.size > 0) {
+    const path = `${auth.user.id}/portfolio_${Date.now()}_${portfolioFile.name}`;
+    const { error: upErr } = await supabase.storage.from("resumes").upload(path, portfolioFile, {
+      cacheControl: "3600",
+      upsert: false,
+    });
+    if (!upErr) portfolioPath = path;
+  }
+
   const { error } = await supabase.from("applications").insert({
     job_id: jobId,
     student_id: auth.user.id,
     resume_url: resumePath,
     cover_letter: String(formData.get("coverLetter") ?? ""),
-    // 스킴 없는 입력은 https를 붙이고, http(s)가 아닌 스킴은 버린다.
-    portfolio_url: normalizeExternalUrl(String(formData.get("portfolioUrl") ?? "")),
+    // 파일을 첨부했으면 그 경로를, 아니면 스킴 없는 입력에 https를 붙인 링크(또는 null)를 저장.
+    portfolio_url: portfolioPath ?? normalizeExternalUrl(String(formData.get("portfolioUrl") ?? "")),
     status: "submitted",
   });
   if (error) {

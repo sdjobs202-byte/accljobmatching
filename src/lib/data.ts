@@ -3,7 +3,6 @@ import { MOCK_STUDENTS } from "./mock";
 import { mockCompanies, mockJobs, readDeleted } from "./mockStore";
 import type { Company, Job, StudentProfile, EmploymentType, AppStatus, Role } from "./types";
 import { matchOne } from "./matching";
-import { normalizeExternalUrl } from "./url";
 import { getSessionProfile } from "./auth";
 import { createAdminClient, isSupabaseEnabled } from "./supabase/admin";
 import { cookies } from "next/headers";
@@ -350,24 +349,25 @@ function resumeKind(name: string): ResumeFile["kind"] {
 }
 
 /**
- * 저장된 이력서 값을 미리보기·다운로드용으로 변환.
+ * 저장된 첨부(이력서·포트폴리오) 값을 미리보기·다운로드용으로 변환.
  * 비공개 버킷 경로면 권한자에게 서명 URL 2개(열람용·다운로드용)를 발급한다.
  * 다운로드는 교차 출처라 `<a download>`가 먹지 않으므로 서명 시점에
  * Content-Disposition을 attachment로 지정해야 한다.
+ * 이력서·포트폴리오 모두 같은 비공개 `resumes` 버킷(사용자 uid 폴더)에 올라간다.
  */
-async function buildResumeFile(stored: string | null): Promise<ResumeFile | null> {
+async function buildAttachedFile(stored: string | null, fallbackName: string): Promise<ResumeFile | null> {
   if (!stored) return null;
 
-  // 레거시(과거 공개 URL "http…"): 그대로 사용. 교차 출처라 강제 다운로드는 불가.
+  // 레거시/링크 제출(공개 URL "http…"): 그대로 사용. 교차 출처라 강제 다운로드는 불가.
   if (stored.startsWith("http")) {
-    const name = decodeURIComponent(stored.split("/").pop()?.split("?")[0] ?? "이력서");
+    const name = decodeURIComponent(stored.split("/").pop()?.split("?")[0] ?? fallbackName);
     return { name, kind: resumeKind(name), viewUrl: stored, downloadUrl: stored };
   }
 
   const admin = createAdminClient();
   if (!admin) return null;
-  // 업로드 경로는 `${userId}/${timestamp}_${원본파일명}` → 원본 파일명 복원
-  const name = (stored.split("/").pop() ?? "이력서").replace(/^\d+_/, "");
+  // 업로드 경로는 `${userId}/${(portfolio_)?timestamp}_${원본파일명}` → 원본 파일명 복원
+  const name = (stored.split("/").pop() ?? fallbackName).replace(/^(?:portfolio_)?\d+_/, "");
   const bucket = admin.storage.from("resumes");
   const [view, download] = await Promise.all([
     bucket.createSignedUrl(stored, RESUME_URL_TTL),
@@ -385,7 +385,7 @@ export interface ApplicationDetail {
   job: Job;
   coverLetter: string;
   resume: ResumeFile | null;
-  portfolioUrl: string | null;
+  portfolio: ResumeFile | null;
   submittedAt: string;
 }
 
@@ -408,8 +408,11 @@ export async function getApplicationDetail(appId: string): Promise<ApplicationDe
   const job = await getJobById(r.job_id);
   if (!job) return null;
 
-  // 이력서: 권한자(여기까지 RLS 통과한 기업/관리자)에게만 서명 URL 발급.
-  const resume = await buildResumeFile(r.resume_url);
+  // 이력서·포트폴리오: 권한자(여기까지 RLS 통과한 기업/관리자)에게만 서명 URL 발급.
+  const [resume, portfolio] = await Promise.all([
+    buildAttachedFile(r.resume_url, "이력서"),
+    buildAttachedFile(r.portfolio_url, "포트폴리오"),
+  ]);
 
   return {
     applicationId: r.id,
@@ -418,8 +421,7 @@ export async function getApplicationDetail(appId: string): Promise<ApplicationDe
     job,
     coverLetter: r.cover_letter ?? "",
     resume,
-    // 지원자가 입력한 값이라 렌더 직전에 다시 통과시킨다(정규화 도입 이전 저장분도 여기서 구제).
-    portfolioUrl: normalizeExternalUrl(r.portfolio_url),
+    portfolio,
     submittedAt: r.created_at?.slice(0, 10) ?? "",
   };
 }

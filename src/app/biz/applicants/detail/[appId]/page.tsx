@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { STATUS_LABEL, type AppStatus } from "@/lib/types";
-import { getApplicationDetail } from "@/lib/data";
-import { IconDownload, IconExternalLink, IconFile } from "@/components/icons";
+import { getApplicationDetail, type ResumeFile } from "@/lib/data";
+import { IconDownload, IconFile } from "@/components/icons";
 import StatusActions from "../../StatusActions";
 
 const STATUS_CLS: Record<AppStatus, string> = {
@@ -12,6 +12,46 @@ const STATUS_CLS: Record<AppStatus, string> = {
   rejected: "badge-rejected",
   hired: "badge-confirmed",
 };
+
+/** 첨부(이력서/포트폴리오) 미리보기 + 다운로드 카드. 형식은 buildAttachedFile 이 판별해 넘긴다. */
+function AttachedFileCard({ file, studentName, label }: { file: ResumeFile; studentName: string; label: string }) {
+  return (
+    <div className="rounded-[18px] border border-line overflow-hidden bg-white">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-line bg-gray-50">
+        <span className="flex items-center gap-2 text-sm font-semibold break-all">
+          <IconFile className="shrink-0 text-muted" />
+          {file.name}
+        </span>
+        <div className="flex items-center gap-2">
+          <a href={file.viewUrl} target="_blank" rel="noopener noreferrer"
+            className="text-xs rounded-full border border-line px-3.5 py-1.5 font-semibold text-muted hover:border-indigo hover:text-indigo transition-colors">
+            새 탭에서 열기
+          </a>
+          <a href={file.downloadUrl}
+            className="inline-flex items-center gap-1.5 text-xs rounded-full bg-indigo text-white px-3.5 py-1.5 font-semibold hover:bg-indigo/90 transition-colors">
+            <IconDownload size={15} />
+            다운로드
+          </a>
+        </div>
+      </div>
+
+      {file.kind === "pdf" && (
+        <iframe src={file.viewUrl} title={`${studentName} ${label} 미리보기`}
+          className="w-full h-[720px] bg-gray-50" />
+      )}
+      {file.kind === "image" && (
+        // eslint-disable-next-line @next/next/no-img-element -- 만료되는 서명 URL이라 next/image 최적화 대상이 아님
+        <img src={file.viewUrl} alt={`${studentName} ${label} 미리보기`}
+          className="w-full bg-gray-50" />
+      )}
+      {file.kind === "other" && (
+        <p className="px-5 py-8 text-center text-sm text-muted">
+          브라우저에서 미리볼 수 없는 형식입니다. 다운로드해서 확인해주세요.
+        </p>
+      )}
+    </div>
+  );
+}
 
 export default async function ApplicantDetailPage({
   params,
@@ -82,52 +122,20 @@ export default async function ApplicantDetailPage({
 
       {/* 지원 서류 — 미리보기 + 다운로드 */}
       <div className="mt-8">
-        <h2 className="font-bold mb-2">지원 서류</h2>
+        <h2 className="font-bold mb-2">이력서</h2>
         {app.resume ? (
-          <div className="rounded-[18px] border border-line overflow-hidden bg-white">
-            <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5 border-b border-line bg-gray-50">
-              <span className="flex items-center gap-2 text-sm font-semibold break-all">
-                <IconFile className="shrink-0 text-muted" />
-                {app.resume.name}
-              </span>
-              <div className="flex items-center gap-2">
-                <a href={app.resume.viewUrl} target="_blank" rel="noopener noreferrer"
-                  className="text-xs rounded-full border border-line px-3.5 py-1.5 font-semibold text-muted hover:border-indigo hover:text-indigo transition-colors">
-                  새 탭에서 열기
-                </a>
-                <a href={app.resume.downloadUrl}
-                  className="inline-flex items-center gap-1.5 text-xs rounded-full bg-indigo text-white px-3.5 py-1.5 font-semibold hover:bg-indigo/90 transition-colors">
-                  <IconDownload size={15} />
-                  다운로드
-                </a>
-              </div>
-            </div>
-
-            {app.resume.kind === "pdf" && (
-              <iframe src={app.resume.viewUrl} title={`${student.name} 이력서 미리보기`}
-                className="w-full h-[720px] bg-gray-50" />
-            )}
-            {app.resume.kind === "image" && (
-              // eslint-disable-next-line @next/next/no-img-element -- 만료되는 서명 URL이라 next/image 최적화 대상이 아님
-              <img src={app.resume.viewUrl} alt={`${student.name} 이력서 미리보기`}
-                className="w-full bg-gray-50" />
-            )}
-            {app.resume.kind === "other" && (
-              <p className="px-5 py-8 text-center text-sm text-muted">
-                브라우저에서 미리볼 수 없는 형식입니다. 다운로드해서 확인해주세요.
-              </p>
-            )}
-          </div>
+          <AttachedFileCard file={app.resume} studentName={student.name} label="이력서" />
         ) : (
           <p className="rounded-xl border border-line px-5 py-4 text-sm text-muted">이력서 미첨부</p>
         )}
+      </div>
 
-        {app.portfolioUrl && (
-          <a href={app.portfolioUrl} target="_blank" rel="noopener noreferrer"
-            className="mt-3 inline-flex items-center gap-2 rounded-full border border-line px-5 py-2.5 text-sm font-semibold hover:border-indigo transition-colors">
-            <IconExternalLink size={16} />
-            포트폴리오 보기
-          </a>
+      <div className="mt-8">
+        <h2 className="font-bold mb-2">포트폴리오</h2>
+        {app.portfolio ? (
+          <AttachedFileCard file={app.portfolio} studentName={student.name} label="포트폴리오" />
+        ) : (
+          <p className="rounded-xl border border-line px-5 py-4 text-sm text-muted">포트폴리오 미첨부</p>
         )}
       </div>
 

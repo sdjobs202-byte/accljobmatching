@@ -14,27 +14,33 @@ export default function ApplyForm({ jobId }: { jobId: string }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(submitApplication, {});
   const [fileName, setFileName] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [portfolioFileName, setPortfolioFileName] = useState<string | null>(null);
+  const [portfolioFileError, setPortfolioFileError] = useState<string | null>(null);
 
   // 용량 초과 파일을 그대로 제출하면 서버 액션이 본문 제한에 걸려 흰 화면으로 떨어진다.
   // 제출 전에 걸러서 무엇이 잘못됐는지 알려준다.
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function checkFile(
+    e: React.ChangeEvent<HTMLInputElement>,
+    setName: (v: string | null) => void,
+    setError: (v: string | null) => void,
+  ) {
     const file = e.target.files?.[0];
     if (!file) {
-      setFileName(null);
-      setFileError(null);
+      setName(null);
+      setError(null);
       return;
     }
     if (file.size > MAX_FILE_MB * 1024 * 1024) {
       e.target.value = ""; // 선택 해제 — 초과 파일이 폼에 남지 않도록
-      setFileName(null);
-      setFileError(
+      setName(null);
+      setError(
         `파일이 너무 큽니다 (${(file.size / 1024 / 1024).toFixed(1)}MB). ` +
           `${MAX_FILE_MB}MB 이하로 압축하거나 페이지 수를 줄여서 올려주세요.`,
       );
       return;
     }
-    setFileError(null);
-    setFileName(file.name);
+    setError(null);
+    setName(file.name);
   }
 
   return (
@@ -61,7 +67,7 @@ export default function ApplyForm({ jobId }: { jobId: string }) {
             type="file"
             accept=".pdf"
             className="hidden"
-            onChange={handleFileChange}
+            onChange={(e) => checkFile(e, setFileName, setFileError)}
           />
         </label>
         {fileError && <p className="mt-2 text-sm text-red-500">{fileError}</p>}
@@ -72,8 +78,32 @@ export default function ApplyForm({ jobId }: { jobId: string }) {
           className="mt-2 w-full rounded-xl border border-line px-4 py-3 text-sm" />
       </div>
       <div>
-        <label className="text-sm font-semibold">포트폴리오 링크 (선택)</label>
-        <input name="portfolioUrl" placeholder="https://" className="mt-2 w-full rounded-xl border border-line px-4 py-3 text-sm" />
+        <label className="text-sm font-semibold block mb-2">포트폴리오 (선택)</label>
+        <label className="group flex items-center gap-3 rounded-2xl border-2 border-dashed border-indigo/40 bg-indigo-soft/40 px-4 py-4 cursor-pointer hover:border-indigo hover:bg-indigo-soft/70 transition-colors">
+          <span className="grid place-items-center w-11 h-11 rounded-xl bg-indigo text-white text-xl shrink-0">📎</span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-bold text-ink">
+              {portfolioFileName ? "다른 파일로 바꾸기" : "포트폴리오 파일 첨부하기"}
+            </span>
+            <span className="block text-xs text-muted truncate">
+              {portfolioFileName ? `✓ ${portfolioFileName}` : `PDF 파일을 눌러서 올려주세요 (최대 ${MAX_FILE_MB}MB)`}
+            </span>
+          </span>
+          <span className="rounded-full bg-indigo text-white px-5 py-2.5 text-sm font-semibold shrink-0 group-hover:bg-indigo/90 transition-colors">
+            파일 선택
+          </span>
+          <input
+            name="portfolio"
+            type="file"
+            accept=".pdf"
+            className="hidden"
+            onChange={(e) => checkFile(e, setPortfolioFileName, setPortfolioFileError)}
+          />
+        </label>
+        {portfolioFileError && <p className="mt-2 text-sm text-red-500">{portfolioFileError}</p>}
+        <p className="mt-2 text-xs text-muted">파일을 첨부하지 않으면 아래 링크가 대신 사용됩니다.</p>
+        <input name="portfolioUrl" placeholder="https:// (파일 대신 링크로 제출하려면)"
+          className="mt-2 w-full rounded-xl border border-line px-4 py-3 text-sm" />
       </div>
       {state.error && <p className="text-sm text-red-500">{state.error}</p>}
       <button disabled={pending}
