@@ -411,6 +411,32 @@ export async function createJob(_prev: ActionState, formData: FormData): Promise
 // ─────────────────────────────────────────────
 // 지원서 제출 (파일 업로드 포함)
 // ─────────────────────────────────────────────
+
+/** 이력서·포트폴리오로 허용하는 형식. 버킷의 allowedMimeTypes 와 반드시 맞춰야 한다. */
+const ATTACHMENT_MIME_BY_EXT: Record<string, string> = {
+  pdf: "application/pdf",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+};
+
+/** 확장자로 Content-Type을 정한다. 확장자를 못 알아보면(허용 목록 밖) null. */
+function attachmentContentType(filename: string): string | null {
+  const ext = filename.split(".").pop()?.toLowerCase() ?? "";
+  return ATTACHMENT_MIME_BY_EXT[ext] ?? null;
+}
+
+/**
+ * Storage 오브젝트 키에 안전한 ASCII만 쓸 수 있다 — 한글 등 비ASCII 파일명은
+ * 그대로 넣으면 "Invalid key" 로 업로드 자체가 거부된다(2026-08-31, 박은미 학생
+ * 이력서 사고의 실제 원인). 안전하지 않으면 base64url로 인코딩해 "b64-" 접두어를
+ * 붙인다 — data.ts 의 buildAttachedFile 에서 그 접두어를 보고 원래 파일명으로 복원한다.
+ */
+const SAFE_FILENAME_RE = /^[\x20-\x7E]+$/;
+function encodeFileName(name: string): string {
+  if (SAFE_FILENAME_RE.test(name) && !name.includes("/")) return name;
+  return "b64-" + Buffer.from(name, "utf8").toString("base64url");
+}
+
 export async function submitApplication(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const supabase = await createClient();
   if (!supabase) return { error: "Supabase 미설정." };
@@ -420,29 +446,48 @@ export async function submitApplication(_prev: ActionState, formData: FormData):
   const jobId = String(formData.get("jobId") ?? "");
   if (!jobId) return { error: "공고 정보가 없습니다." };
 
-  // 이력서 파일 업로드(Storage: resumes 비공개 버킷)
+  // 이력서 파일 업로드(Storage: resumes 비공개 버킷, PDF·DOC·DOCX 허용)
   // 공개 URL 대신 "경로"만 저장한다 → 조회 시 권한자에게 서명 URL을 발급(PII 보호)
+  //
+  // 두 가지를 실제 장애로 확인했다(2026-08-31, 박은미 학생 이력서 사고):
+  //  1) File 객체를 그대로 넘기면 SDK가 contentType 옵션을 무시하고 File.type을 쓴다.
+  //     브라우저·OS 조합에 따라 File.type이 비어있으면 버킷의 allowedMimeTypes에 막혀
+  //     업로드가 실패한다 → ArrayBuffer로 바꿔 넘기면 옵션이 제대로 적용된다.
+  //  2) Storage 키는 ASCII만 허용한다. 한글 파일명(예: "박은미_이력서.pdf")을 키에
+  //     그대로 넣으면 "Invalid key"로 거부된다 → encodeFileName 으로 안전하게 인코딩한다.
+  // 두 경우 모두 예전 코드는 실패를 무시하고 지원서만 만들었다(이력서 없이 "제출 성공"
+  // 으로 보임). 그래서 여기서 실패하면 반드시 에러로 되돌려준다.
   let resumePath: string | null = null;
   const file = formData.get("resume");
   if (file instanceof File && file.size > 0) {
-    const path = `${auth.user.id}/${Date.now()}_${file.name}`;
-    const { error: upErr } = await supabase.storage.from("resumes").upload(path, file, {
+    const contentType = attachmentContentType(file.name);
+    if (!contentType) return { error: "이력서는 PDF, DOC, DOCX 파일만 첨부할 수 있습니다." };
+    const path = `${auth.user.id}/${Date.now()}_${encodeFileName(file.name)}`;
+    const bytes = await file.arrayBuffer();
+    const { error: upErr } = await supabase.storage.from("resumes").upload(path, bytes, {
       cacheControl: "3600",
       upsert: false,
+      contentType,
     });
-    if (!upErr) resumePath = path;
+    if (upErr) return { error: `이력서 업로드에 실패했습니다 (${upErr.message}). 다시 시도해주세요.` };
+    resumePath = path;
   }
 
   // 포트폴리오 파일 업로드(이력서와 같은 비공개 버킷). 파일을 첨부하면 링크보다 우선한다.
   let portfolioPath: string | null = null;
   const portfolioFile = formData.get("portfolio");
   if (portfolioFile instanceof File && portfolioFile.size > 0) {
-    const path = `${auth.user.id}/portfolio_${Date.now()}_${portfolioFile.name}`;
-    const { error: upErr } = await supabase.storage.from("resumes").upload(path, portfolioFile, {
+    const contentType = attachmentContentType(portfolioFile.name);
+    if (!contentType) return { error: "포트폴리오는 PDF, DOC, DOCX 파일만 첨부할 수 있습니다." };
+    const path = `${auth.user.id}/portfolio_${Date.now()}_${encodeFileName(portfolioFile.name)}`;
+    const bytes = await portfolioFile.arrayBuffer();
+    const { error: upErr } = await supabase.storage.from("resumes").upload(path, bytes, {
       cacheControl: "3600",
       upsert: false,
+      contentType,
     });
-    if (!upErr) portfolioPath = path;
+    if (upErr) return { error: `포트폴리오 업로드에 실패했습니다 (${upErr.message}). 다시 시도해주세요.` };
+    portfolioPath = path;
   }
 
   const { error } = await supabase.from("applications").insert({

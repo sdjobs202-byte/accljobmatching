@@ -10,6 +10,10 @@ import { submitApplication, type ActionState } from "@/lib/actions";
  */
 const MAX_FILE_MB = 8;
 
+/** 서버(actions.ts 의 ATTACHMENT_MIME_BY_EXT)와 반드시 맞춰야 하는 허용 확장자. */
+const ALLOWED_EXTS = ["pdf", "doc", "docx"];
+const ACCEPT_ATTR = ALLOWED_EXTS.map((e) => `.${e}`).join(",");
+
 export default function ApplyForm({ jobId }: { jobId: string }) {
   const [state, formAction, pending] = useActionState<ActionState, FormData>(submitApplication, {});
   const [fileName, setFileName] = useState<string | null>(null);
@@ -30,6 +34,13 @@ export default function ApplyForm({ jobId }: { jobId: string }) {
       setError(null);
       return;
     }
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+    if (!ALLOWED_EXTS.includes(ext)) {
+      e.target.value = "";
+      setName(null);
+      setError("PDF, DOC, DOCX 파일만 첨부할 수 있습니다.");
+      return;
+    }
     if (file.size > MAX_FILE_MB * 1024 * 1024) {
       e.target.value = ""; // 선택 해제 — 초과 파일이 폼에 남지 않도록
       setName(null);
@@ -47,7 +58,7 @@ export default function ApplyForm({ jobId }: { jobId: string }) {
     <form action={formAction} className="space-y-5">
       <input type="hidden" name="jobId" value={jobId} />
       <div>
-        <label className="text-sm font-semibold block mb-2">이력서 (PDF)</label>
+        <label className="text-sm font-semibold block mb-2">이력서 (PDF · Word)</label>
         {/* 눈에 확 띄는 첨부 영역 — 카드 전체가 클릭됨 */}
         <label className="group flex items-center gap-3 rounded-2xl border-2 border-dashed border-indigo/40 bg-indigo-soft/40 px-4 py-4 cursor-pointer hover:border-indigo hover:bg-indigo-soft/70 transition-colors">
           <span className="grid place-items-center w-11 h-11 rounded-xl bg-indigo text-white text-xl shrink-0">📎</span>
@@ -56,7 +67,7 @@ export default function ApplyForm({ jobId }: { jobId: string }) {
               {fileName ? "다른 파일로 바꾸기" : "이력서 파일 첨부하기"}
             </span>
             <span className="block text-xs text-muted truncate">
-              {fileName ? `✓ ${fileName}` : `PDF 파일을 눌러서 올려주세요 (최대 ${MAX_FILE_MB}MB)`}
+              {fileName ? `✓ ${fileName}` : `PDF 또는 Word 파일을 눌러서 올려주세요 (최대 ${MAX_FILE_MB}MB)`}
             </span>
           </span>
           <span className="rounded-full bg-indigo text-white px-5 py-2.5 text-sm font-semibold shrink-0 group-hover:bg-indigo/90 transition-colors">
@@ -65,7 +76,7 @@ export default function ApplyForm({ jobId }: { jobId: string }) {
           <input
             name="resume"
             type="file"
-            accept=".pdf"
+            accept={ACCEPT_ATTR}
             className="hidden"
             onChange={(e) => checkFile(e, setFileName, setFileError)}
           />
@@ -86,7 +97,7 @@ export default function ApplyForm({ jobId }: { jobId: string }) {
               {portfolioFileName ? "다른 파일로 바꾸기" : "포트폴리오 파일 첨부하기"}
             </span>
             <span className="block text-xs text-muted truncate">
-              {portfolioFileName ? `✓ ${portfolioFileName}` : `PDF 파일을 눌러서 올려주세요 (최대 ${MAX_FILE_MB}MB)`}
+              {portfolioFileName ? `✓ ${portfolioFileName}` : `PDF 또는 Word 파일을 눌러서 올려주세요 (최대 ${MAX_FILE_MB}MB)`}
             </span>
           </span>
           <span className="rounded-full bg-indigo text-white px-5 py-2.5 text-sm font-semibold shrink-0 group-hover:bg-indigo/90 transition-colors">
@@ -95,7 +106,7 @@ export default function ApplyForm({ jobId }: { jobId: string }) {
           <input
             name="portfolio"
             type="file"
-            accept=".pdf"
+            accept={ACCEPT_ATTR}
             className="hidden"
             onChange={(e) => checkFile(e, setPortfolioFileName, setPortfolioFileError)}
           />

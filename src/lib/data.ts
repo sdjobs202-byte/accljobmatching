@@ -366,8 +366,19 @@ async function buildAttachedFile(stored: string | null, fallbackName: string): P
 
   const admin = createAdminClient();
   if (!admin) return null;
-  // 업로드 경로는 `${userId}/${(portfolio_)?timestamp}_${원본파일명}` → 원본 파일명 복원
-  const name = (stored.split("/").pop() ?? fallbackName).replace(/^(?:portfolio_)?\d+_/, "");
+  // 업로드 경로는 `${userId}/${(portfolio_)?timestamp}_${인코딩된 파일명}` → 원본 파일명 복원.
+  // 한글 등 비ASCII 파일명은 업로드 시 "b64-" 접두어를 붙여 base64url로 저장했다
+  // (actions.ts 의 encodeFileName) — Storage 키가 ASCII만 허용하기 때문.
+  const rawName = (stored.split("/").pop() ?? fallbackName).replace(/^(?:portfolio_)?\d+_/, "");
+  const name = rawName.startsWith("b64-")
+    ? (() => {
+        try {
+          return Buffer.from(rawName.slice(4), "base64url").toString("utf8");
+        } catch {
+          return fallbackName;
+        }
+      })()
+    : rawName;
   const bucket = admin.storage.from("resumes");
   const [view, download] = await Promise.all([
     bucket.createSignedUrl(stored, RESUME_URL_TTL),
