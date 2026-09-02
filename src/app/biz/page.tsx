@@ -29,8 +29,14 @@ export default async function BizDashboard() {
           <p className="text-sm text-muted">{company.industry} · {company.region}</p>
         </div>
         <Link
+          href="/onboarding"
+          className="ml-auto rounded-full border border-line px-5 py-2.5 text-sm font-semibold hover:border-indigo hover:text-indigo transition-colors"
+        >
+          회사 정보 수정
+        </Link>
+        <Link
           href="/biz/jobs/new"
-          className="ml-auto rounded-full bg-indigo text-white px-5 py-2.5 text-sm font-semibold hover:bg-indigo/90 transition-colors"
+          className="rounded-full bg-indigo text-white px-5 py-2.5 text-sm font-semibold hover:bg-indigo/90 transition-colors"
         >
           + 공고 등록
         </Link>

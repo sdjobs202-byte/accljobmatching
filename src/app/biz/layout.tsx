@@ -25,6 +25,7 @@ export default async function BizLayout({ children }: { children: ReactNode }) {
             <nav className="flex items-center gap-4 text-sm font-medium">
               <Link href="/biz" className="hover:text-indigo">대시보드</Link>
               <Link href="/biz/jobs/new" className="hover:text-indigo">공고 등록</Link>
+              <Link href="/onboarding" className="hover:text-indigo">회사 정보 수정</Link>
             </nav>
           </div>
           <div className="flex items-center gap-3">
