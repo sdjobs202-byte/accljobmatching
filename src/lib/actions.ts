@@ -320,6 +320,13 @@ export async function saveCompanyProfile(_prev: ActionState, formData: FormData)
     await supabase.from("companies").update({ hashtags }).eq("id", companyId);
   }
 
+  // 홈페이지 주소도 best-effort — website 컬럼(supabase/add_company_website.sql)이 없어도 저장은 막지 않는다.
+  // href로 그대로 쓰이므로 포트폴리오 링크와 같은 방식으로 정규화(스킴 보정 + javascript: 등 차단)한다.
+  const website = normalizeExternalUrl(String(formData.get("website") ?? ""));
+  if (companyId && website) {
+    await supabase.from("companies").update({ website }).eq("id", companyId);
+  }
+
   redirect("/biz");
 }
 

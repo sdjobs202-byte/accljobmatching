@@ -33,6 +33,7 @@ type CompanyRow = {
   logo_url: string | null;
   intro: string | null;
   perks: string | null;
+  website?: string | null;
   hashtags?: string[] | null;
 };
 
@@ -55,8 +56,19 @@ const mapCompany = (r: CompanyRow): Company => ({
   logoUrl: r.logo_url ?? undefined,
   intro: r.intro ?? "",
   perks: r.perks ?? "",
+  website: r.website ?? undefined,
   hashtags: r.hashtags ?? undefined,
 });
+
+/** website 컬럼은 supabase/add_company_website.sql 실행 전까지는 없을 수 있다 — 있으면 포함, 없으면 폴백. */
+async function selectCompanyRow(
+  supabase: NonNullable<Awaited<ReturnType<typeof createClient>>>,
+  build: (columns: string) => PromiseLike<{ data: unknown; error: unknown }>,
+) {
+  const withWebsite = await build("id, name, industry, region, logo_url, intro, perks, website");
+  if (!withWebsite.error) return withWebsite.data as CompanyRow | null;
+  return (await build("id, name, industry, region, logo_url, intro, perks")).data as CompanyRow | null;
+}
 
 // ── 공고 ────────────────────────────────────────────
 export async function getOpenJobs(): Promise<Job[]> {
@@ -107,12 +119,10 @@ export async function getCompanies(): Promise<Company[]> {
 export async function getCompanyById(id: string): Promise<Company | null> {
   const supabase = await createClient();
   if (!supabase) return (await mockCompanies()).find((c) => c.id === id) ?? null;
-  const { data } = await supabase
-    .from("companies")
-    .select("id, name, industry, region, logo_url, intro, perks")
-    .eq("id", id)
-    .single();
-  return data ? mapCompany(data as CompanyRow) : null;
+  const data = await selectCompanyRow(supabase, (columns) =>
+    supabase.from("companies").select(columns).eq("id", id).single(),
+  );
+  return data ? mapCompany(data) : null;
 }
 
 /** 현재 로그인 기업 사용자가 소유한 회사(없으면 null). */
@@ -133,12 +143,10 @@ export async function getMyCompany(): Promise<Company | null> {
   }
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return null;
-  const { data } = await supabase
-    .from("companies")
-    .select("id, name, industry, region, logo_url, intro, perks")
-    .eq("owner_id", auth.user.id)
-    .maybeSingle();
-  return data ? mapCompany(data as CompanyRow) : null;
+  const data = await selectCompanyRow(supabase, (columns) =>
+    supabase.from("companies").select(columns).eq("owner_id", auth.user.id).maybeSingle(),
+  );
+  return data ? mapCompany(data) : null;
 }
 
 // ── 학생 프로필 ──────────────────────────────────────

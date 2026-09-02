@@ -42,6 +42,12 @@ export default async function CompanyDetail({
       </div>
       <p className="mt-4 text-ink/80">{company.intro}</p>
       <p className="mt-2 text-sm text-muted">우대/복지 · {company.perks}</p>
+      {company.website && (
+        <a href={company.website} target="_blank" rel="noopener noreferrer"
+          className="mt-2 inline-block text-sm font-semibold text-indigo hover:underline">
+          홈페이지 방문 ↗
+        </a>
+      )}
 
       {/* 기업소개 해시태그 */}
       {tags.length > 0 && (

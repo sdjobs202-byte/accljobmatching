@@ -221,6 +221,16 @@ export default function OnboardingForm({ role, name, phone, initialData }: Onboa
           </div>
 
           <div>
+            <label className="text-sm font-semibold block mb-1.5">홈페이지 주소</label>
+            <input
+              name="website"
+              defaultValue={initialData?.website || ""}
+              placeholder="https://"
+              className="w-full rounded-xl border border-line px-4 py-3 text-sm focus:outline-none focus:border-indigo"
+            />
+          </div>
+
+          <div>
             <label className="text-sm font-semibold block mb-1.5">채용담당자 연락처 <span className="text-indigo">*</span></label>
             <input
               name="phone"
