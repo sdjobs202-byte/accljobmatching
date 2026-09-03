@@ -24,6 +24,7 @@ type JobRow = {
   region: string | null;
   required_skills: string[];
   description: string | null;
+  posting_url?: string | null;
 };
 type CompanyRow = {
   id: string;
@@ -46,6 +47,7 @@ const mapJob = (r: JobRow): Job => ({
   region: r.region ?? "",
   requiredSkills: r.required_skills ?? [],
   description: r.description ?? "",
+  postingUrl: r.posting_url ?? undefined,
 });
 
 const mapCompany = (r: CompanyRow): Company => ({
@@ -76,7 +78,7 @@ export async function getOpenJobs(): Promise<Job[]> {
   if (!supabase) return mockJobs();
   const { data, error } = await supabase
     .from("jobs")
-    .select("id, company_id, title, job_category, employment_type, region, required_skills, description")
+    .select("id, company_id, title, job_category, employment_type, region, required_skills, description, posting_url")
     .eq("status", "open")
     .order("created_at", { ascending: false });
   if (error || !data) return mockJobs();
@@ -88,7 +90,7 @@ export async function getJobById(id: string): Promise<Job | null> {
   if (!supabase) return (await mockJobs()).find((j) => j.id === id) ?? null;
   const { data } = await supabase
     .from("jobs")
-    .select("id, company_id, title, job_category, employment_type, region, required_skills, description")
+    .select("id, company_id, title, job_category, employment_type, region, required_skills, description, posting_url")
     .eq("id", id)
     .single();
   return data ? mapJob(data as JobRow) : null;
@@ -99,7 +101,7 @@ export async function getJobsByCompany(companyId: string): Promise<Job[]> {
   if (!supabase) return (await mockJobs()).filter((j) => j.companyId === companyId);
   const { data } = await supabase
     .from("jobs")
-    .select("id, company_id, title, job_category, employment_type, region, required_skills, description")
+    .select("id, company_id, title, job_category, employment_type, region, required_skills, description, posting_url")
     .eq("company_id", companyId)
     .order("created_at", { ascending: false });
   return ((data as JobRow[]) ?? []).map(mapJob);

@@ -100,6 +100,12 @@ export default async function CompanyDetail({
             ))}
           </div>
           <p className="mt-5 text-ink/80">{active.description}</p>
+          {active.postingUrl && (
+            <a href={active.postingUrl} target="_blank" rel="noopener noreferrer"
+              className="mt-3 flex items-center gap-1 text-sm font-semibold text-indigo hover:underline">
+              채용공고 원문 보기 ↗
+            </a>
+          )}
           <Link href={`/apply/${active.id}`}
             className="mt-6 inline-block rounded-full bg-indigo text-white px-7 py-3 font-semibold">
             이 공고에 지원하기

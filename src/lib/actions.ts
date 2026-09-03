@@ -384,6 +384,7 @@ export async function createJob(_prev: ActionState, formData: FormData): Promise
       region: String(formData.get("region") ?? ""),
       requiredSkills: formData.getAll("skills").map(String),
       description: String(formData.get("description") ?? ""),
+      postingUrl: normalizeExternalUrl(String(formData.get("postingUrl") ?? "")) ?? undefined,
     });
     revalidatePath("/biz");
     redirect("/biz");
@@ -407,6 +408,8 @@ export async function createJob(_prev: ActionState, formData: FormData): Promise
     region: String(formData.get("region") ?? ""),
     required_skills: formData.getAll("skills").map(String),
     description: String(formData.get("description") ?? ""),
+    // 스킴 없는 입력은 https를 붙이고, http(s)가 아닌 스킴(javascript: 등)은 버린다.
+    posting_url: normalizeExternalUrl(String(formData.get("postingUrl") ?? "")),
     status: "open", // MVP: 등록 즉시 공개(승인 플로우는 관리자에서 토글)
   });
   if (error) return { error: error.message };

@@ -38,6 +38,7 @@ export interface Job {
   region: string;
   requiredSkills: string[];
   description: string;
+  postingUrl?: string;
 }
 
 export interface StudentProfile {

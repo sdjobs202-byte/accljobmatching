@@ -150,6 +150,16 @@ export default function NewJobPage() {
           />
         </div>
 
+        <div>
+          <label className="text-sm font-semibold block mb-1.5">채용공고 링크 (선택)</label>
+          <p className="text-xs text-muted mb-2">회사 홈페이지·채용 사이트 등 원문 공고 주소를 넣으면 지원자에게 클릭 가능한 링크로 보여줍니다.</p>
+          <input
+            name="postingUrl"
+            placeholder="https://"
+            className="w-full rounded-xl border border-line px-4 py-3 text-sm focus:outline-none focus:border-indigo"
+          />
+        </div>
+
         <div className="grid sm:grid-cols-2 gap-4">
           <div>
             <label className="text-sm font-semibold block mb-1.5">모집 인원</label>
