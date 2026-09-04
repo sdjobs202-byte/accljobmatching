@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { EMPLOYMENT_LABEL } from "@/lib/types";
 import { getCompanyById, getJobsByCompany, getMyMatchKeywords } from "@/lib/data";
 import { companyHashtags, scoreHashtagMatch } from "@/lib/keywords";
+import { IconChevronRight } from "@/components/icons";
 
 export default async function CompanyDetail({
   params,
@@ -32,8 +33,8 @@ export default async function CompanyDetail({
     <div className="mx-auto max-w-4xl px-5 py-12">
       {/* 기업 헤더 */}
       <div className="flex items-start gap-4">
-        <div className="w-14 h-14 rounded-2xl bg-indigo-soft flex items-center justify-center text-indigo font-extrabold text-xl">
-          {company.name[0]}
+        <div className="w-14 h-14 rounded-2xl bg-indigo-soft flex items-center justify-center text-indigo">
+          <IconChevronRight size={28} />
         </div>
         <div>
           <h1 className="text-2xl font-bold">{company.name}</h1>

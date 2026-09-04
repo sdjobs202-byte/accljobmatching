@@ -159,6 +159,15 @@ export function IconRotateCcw(props: IconProps) {
   );
 }
 
+/** 오른쪽 화살표 — 로고 없는 기업의 자리표시 배지 등 */
+export function IconChevronRight(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M9 5l7 7-7 7" />
+    </Icon>
+  );
+}
+
 /** 외부 링크 */
 export function IconExternalLink(props: IconProps) {
   return (
