@@ -100,7 +100,7 @@ export default async function CompanyDetail({
               <span key={s} className="text-xs rounded-full bg-indigo-soft text-indigo px-2 py-0.5">{s}</span>
             ))}
           </div>
-          <p className="mt-5 text-ink/80">{active.description}</p>
+          <p className="mt-5 text-ink/80 whitespace-pre-line">{active.description}</p>
           {active.postingUrl && (
             <a href={active.postingUrl} target="_blank" rel="noopener noreferrer"
               className="mt-3 flex items-center gap-1 text-sm font-semibold text-indigo hover:underline">
