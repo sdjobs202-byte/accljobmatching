@@ -85,12 +85,20 @@ export default async function AdminUsersPage() {
                 </td>
                 <td className="px-5 py-4 text-muted">{u.createdAt}</td>
                 <td className="px-5 py-4">
-                  {u.role !== "admin" && (
-                    <DeleteButton
-                      action={deleteAdminUser.bind(null, u.id, u.role)}
-                      confirmMsg={`${ROLE_NOUN[u.role]} 회원 "${u.name || "(이름 미설정)"}" 을(를) 삭제할까요?`}
-                    />
-                  )}
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href={`/admin/users/${u.id}/edit`}
+                      className="text-xs rounded-full border border-line px-3 py-1.5 text-muted hover:text-indigo hover:border-indigo transition-colors"
+                    >
+                      수정
+                    </Link>
+                    {u.role !== "admin" && (
+                      <DeleteButton
+                        action={deleteAdminUser.bind(null, u.id, u.role)}
+                        confirmMsg={`${ROLE_NOUN[u.role]} 회원 "${u.name || "(이름 미설정)"}" 을(를) 삭제할까요?`}
+                      />
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

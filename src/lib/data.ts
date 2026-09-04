@@ -642,6 +642,21 @@ export async function getAdminUsers(): Promise<AdminUser[]> {
   }));
 }
 
+/** 관리자: 회원 1명 조회(수정 화면용). 데모 모드는 지원하지 않는다(실 회원 데이터 아님). */
+export async function getAdminUserById(id: string): Promise<AdminUser | null> {
+  const db = await adminDb();
+  if (!db) return null;
+  const { data } = await db
+    .from("profiles")
+    .select("id, name, role, status, created_at")
+    .eq("id", id)
+    .maybeSingle();
+  if (!data) return null;
+  type Row = { id: string; name: string; role: Role; status: string; created_at: string };
+  const r = data as Row;
+  return { id: r.id, name: r.name, role: r.role, status: r.status, createdAt: r.created_at?.slice(0, 10) ?? "" };
+}
+
 export interface AdminJob {
   id: string; title: string; companyName: string; status: string; applicantCount: number; createdAt: string;
 }

@@ -611,6 +611,22 @@ export async function deleteAdminUser(id: string, role: Role): Promise<ActionSta
   return { ok: true };
 }
 
+/** 관리자: 회원 이름·상태 수정. 역할(학생/기업)은 변경하지 않는다(연관 데이터 정합성 문제). */
+export async function adminUpdateUser(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const id = String(formData.get("userId") ?? "").trim();
+  const name = String(formData.get("name") ?? "").trim();
+  const status = String(formData.get("status") ?? "active");
+  if (!id) return { error: "회원 정보가 없습니다." };
+  if (!name) return { error: "이름을 입력해주세요." };
+
+  const { db, error: denied } = await requireAdminDb();
+  if (!db) return { error: denied };
+  const { error } = await db.from("profiles").update({ name, status }).eq("id", id);
+  if (error) return { error: error.message };
+  revalidateAdmin();
+  redirect("/admin/users");
+}
+
 /** 관리자: 공고 삭제. */
 export async function deleteAdminJob(id: string): Promise<ActionState> {
   if (!isSupabaseEnabled()) {
