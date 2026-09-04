@@ -15,6 +15,7 @@ import {
   addDeleted,
   addCompany,
   addJob,
+  updateMockJob,
   upsertCompany,
   clearMockStore,
   rid,
@@ -707,6 +708,45 @@ export async function adminCreateJob(_prev: ActionState, formData: FormData): Pr
     posting_url: job.postingUrl ?? null,
     status: "open",
   });
+  if (error) return { error: error.message };
+  revalidateAdmin();
+  redirect("/admin/jobs");
+}
+
+/** 관리자: 공고 수정. 회사 배정은 바꾸지 않는다(등록 후 회사 재배정은 별도 정책 필요). */
+export async function adminUpdateJob(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  const jobId = String(formData.get("jobId") ?? "").trim();
+  const title = String(formData.get("title") ?? "").trim();
+  if (!jobId) return { error: "공고 정보가 없습니다." };
+  if (!title) return { error: "공고 제목을 입력해주세요." };
+
+  const job = {
+    title,
+    jobCategory: String(formData.get("jobCategory") ?? ""),
+    employmentType: String(formData.get("employmentType") ?? "fulltime") as EmploymentType,
+    region: String(formData.get("region") ?? ""),
+    requiredSkills: formData.getAll("skills").map(String),
+    description: String(formData.get("description") ?? ""),
+    postingUrl: normalizeExternalUrl(String(formData.get("postingUrl") ?? "")) ?? undefined,
+  };
+
+  if (!isSupabaseEnabled()) {
+    await updateMockJob(jobId, job);
+    revalidateAdmin();
+    redirect("/admin/jobs");
+  }
+
+  const { db, error: denied } = await requireAdminDb();
+  if (!db) return { error: denied };
+  const { error } = await db.from("jobs").update({
+    title: job.title,
+    job_category: job.jobCategory,
+    employment_type: job.employmentType,
+    region: job.region,
+    required_skills: job.requiredSkills,
+    description: job.description,
+    posting_url: job.postingUrl ?? null,
+  }).eq("id", jobId);
   if (error) return { error: error.message };
   revalidateAdmin();
   redirect("/admin/jobs");

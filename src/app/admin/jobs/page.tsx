@@ -78,6 +78,12 @@ export default async function AdminJobsPage() {
                     >
                       지원자
                     </Link>
+                    <Link
+                      href={`/admin/jobs/${job.id}/edit`}
+                      className="text-xs rounded-full border border-line px-3 py-1.5 text-muted hover:text-indigo hover:border-indigo transition-colors"
+                    >
+                      수정
+                    </Link>
                     <DeleteButton
                       action={deleteAdminJob.bind(null, job.id)}
                       confirmMsg={`공고 "${job.title}" 을(를) 삭제할까요?`}

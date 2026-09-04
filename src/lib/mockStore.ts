@@ -73,6 +73,14 @@ export async function addJob(j: Job) {
   list.push(j);
   await writeArr(J_COOKIE, list);
 }
+/** 추가된(시드가 아닌) 공고 수정. 시드 공고는 데모 데이터라 수정 대상에서 제외. */
+export async function updateMockJob(id: string, patch: Partial<Omit<Job, "id" | "companyId">>) {
+  const list = await readAddedJobs();
+  const idx = list.findIndex((j) => j.id === id);
+  if (idx === -1) return;
+  list[idx] = { ...list[idx], ...patch };
+  await writeArr(J_COOKIE, list);
+}
 
 // ── 병합 뷰(시드 + 추가 − 삭제) ──────────────────────
 /** 표시용 전체 회사 목록. */
