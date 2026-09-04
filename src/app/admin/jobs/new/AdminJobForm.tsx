@@ -139,6 +139,13 @@ export default function AdminJobForm({ companies }: { companies: CompanyOption[]
             className="w-full rounded-xl border border-line px-4 py-3 text-sm focus:outline-none focus:border-indigo resize-none" />
         </div>
 
+        <div>
+          <label className="text-sm font-semibold block mb-1.5">채용공고 링크 (선택)</label>
+          <p className="text-xs text-muted mb-2">회사 홈페이지·채용 사이트 등 원문 공고 주소를 넣으면 지원자에게 클릭 가능한 링크로 보여줍니다.</p>
+          <input name="postingUrl" placeholder="https://"
+            className="w-full rounded-xl border border-line px-4 py-3 text-sm focus:outline-none focus:border-indigo" />
+        </div>
+
         {state.error && <p className="text-sm text-red-500">{state.error}</p>}
         <button type="submit" disabled={pending}
           className="w-full rounded-xl bg-indigo text-white py-3.5 font-semibold text-base hover:bg-indigo/90 transition-colors disabled:opacity-60">

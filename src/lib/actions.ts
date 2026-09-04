@@ -684,6 +684,7 @@ export async function adminCreateJob(_prev: ActionState, formData: FormData): Pr
     region: String(formData.get("region") ?? ""),
     requiredSkills: formData.getAll("skills").map(String),
     description: String(formData.get("description") ?? ""),
+    postingUrl: normalizeExternalUrl(String(formData.get("postingUrl") ?? "")) ?? undefined,
   };
 
   if (!isSupabaseEnabled()) {
@@ -702,6 +703,8 @@ export async function adminCreateJob(_prev: ActionState, formData: FormData): Pr
     region: job.region,
     required_skills: job.requiredSkills,
     description: job.description,
+    // 스킴 없는 입력은 https를 붙이고, http(s)가 아닌 스킴(javascript: 등)은 버린다.
+    posting_url: job.postingUrl ?? null,
     status: "open",
   });
   if (error) return { error: error.message };
