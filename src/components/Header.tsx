@@ -3,6 +3,7 @@ import { Logo } from "./Logo";
 import { getSessionProfile } from "@/lib/auth";
 import { isSupabaseEnabled } from "@/lib/supabase/admin";
 import { signOut } from "@/lib/actions";
+import { MATCH_FEATURE_ENABLED } from "@/lib/featureFlags";
 
 export default async function Header() {
   // Supabase 미설정(로컬 데모)일 때는 모든 메뉴 노출, 설정 시 역할 기반 노출.
@@ -19,7 +20,7 @@ export default async function Header() {
         <nav className="flex items-center gap-6 text-sm font-medium">
           <Link href="/companies" className="hover:text-indigo">채용공고</Link>
 
-          {(demo || role === "student") && (
+          {MATCH_FEATURE_ENABLED && (demo || role === "student") && (
             <Link href="/match" className="text-indigo font-semibold hover:opacity-80">✨ 키워드매칭</Link>
           )}
           {(demo || role === "student") && (

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { EMPLOYMENT_LABEL } from "@/lib/types";
 import { getOpenJobs, getCompanies, getMyMatchKeywords } from "@/lib/data";
 import { companyHashtags, scoreHashtagMatch } from "@/lib/keywords";
+import { MATCH_FEATURE_ENABLED } from "@/lib/featureFlags";
 
 export default async function CompaniesPage({
   searchParams,
@@ -39,8 +40,8 @@ export default async function CompaniesPage({
       <h1 className="hail text-3xl mb-2">너에게 맞는 자리부터.</h1>
       <p className="text-muted text-sm mb-6">{myKeywords.length ? "내 키워드에 맞춰 정렬했어요" : "최신 채용 공고"}</p>
 
-      {/* 중간매칭 키워드 배너 */}
-      {myKeywords.length > 0 ? (
+      {/* 중간매칭 키워드 배너 — 임시 비활성화(MATCH_FEATURE_ENABLED) */}
+      {MATCH_FEATURE_ENABLED && (myKeywords.length > 0 ? (
         <div className="mb-8 flex flex-wrap items-center gap-3 rounded-2xl bg-indigo-soft/60 border border-indigo/15 px-5 py-4">
           <span className="text-sm font-semibold text-indigo">✨ {myKeywords.length}개 키워드로 매칭 중</span>
           <div className="flex flex-wrap gap-1.5">
@@ -56,7 +57,7 @@ export default async function CompaniesPage({
           <span className="text-sm font-semibold">✨ 원하는 서류를 넣으면 키워드로 딱 맞는 회사를 찾아드려요</span>
           <span className="ml-auto text-sm font-semibold">키워드 매칭 시작 →</span>
         </Link>
-      )}
+      ))}
 
       {/* 필터 */}
       <form className="flex flex-wrap gap-2 mb-8">
